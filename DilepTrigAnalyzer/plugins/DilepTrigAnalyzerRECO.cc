@@ -11,7 +11,7 @@
 
 #include "FWCore/Common/interface/TriggerNames.h"
 #include "FWCore/Common/interface/TriggerResultsByName.h"
-#include "DilepTrigAnalyzer/DilepTrigAnalyzer/interface/DilepTrigAnalyzerRECO.h"
+#include "TrigAnalyzer/DilepTrigAnalyzer/interface/DilepTrigAnalyzerRECO.h"
 
 // need access to class objects being referenced to get their content!
 #include "DataFormats/RecoCandidate/interface/RecoEcalCandidate.h"
