@@ -21,6 +21,9 @@
 #include "DataFormats/Common/interface/TriggerResults.h"
 #include "DataFormats/HLTReco/interface/TriggerEvent.h"
 
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "CommonTools/UtilAlgos/interface/TFileService.h"
+
 #include "TH1.h"
 
 //
@@ -28,41 +31,45 @@
 //
 class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   
+  typedef math::XYZTLorentzVectorF LorentzVector;
+
  public:
   explicit DilepTrigAnalyzerRECO(const edm::ParameterSet&);
   ~DilepTrigAnalyzerRECO();
 
+  enum hltTrigs {mm, mmi, mmtk, mmitk, em, emi, me, mei};
+
   virtual void beginRun(edm::Run const &, edm::EventSetup const&);
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
-  bool analyzeTrigger(const edm::Event&, const edm::EventSetup&, const std::string& triggerName);
-
-  enum mmTrigs {mm, mmi, mmtk, mmitk};
-  enum emTrigs {em, emi, me, mei};
+  bool analyzeTrigger(const edm::Event&, const edm::EventSetup&, const hltTrigs triggerEnum);
 
  private:
 
-  bool isTriggerPassed(const std::string& triggerName);
-  std::string lastModuleLabel(const std::string& triggerName);
+  // bool isTriggerPassed(const edm::Event& iEvent, const edm::EventSetup& iSetup, const std::string& triggerName);
+  // std::string lastModuleLabel(const edm::Event& iEvent, const edm::EventSetup& iSetup, const std::string& triggerName);
+
+  void bookHists(edm::Service<TFileService>& fs, const std::string& suffix);
+  void fillHists(const LorentzVector& lead, const LorentzVector& subl, const std::string& suffix, bool hlt);
 
   /// module config parameters
   std::string   processName_;
   std::string   triggerName_;
   edm::InputTag triggerResultsTag_;
   edm::InputTag triggerEventTag_;
+  edm::InputTag electronsInputTag_;
+  edm::InputTag muonsInputTag_;
+  bool verbose_;
 
   /// additional class data memebers
   edm::Handle<edm::TriggerResults>           triggerResultsHandle_;
   edm::Handle<trigger::TriggerEvent> triggerEventHandle_;
   HLTConfigProvider hltConfig_;
-  std::vector<std::string> dimuTriggerNames_;
-  std::vector<std::string> emuTriggerNames_;
+  std::vector<std::string> hltTriggerNames_;
+  std::vector<std::string> hltShortNames_;
   TH1F* h_results_mm_;
   TH1F* h_results_em_;
 
-  std::vector<TH1F*> h_lead_pt_;
-  std::vector<TH1F*> h_subl_pt_;
-  std::vector<TH1F*> h_lead_eta_;
-  std::vector<TH1F*> h_subl_eta_;
+  std::map<std::string,TH1F*> hists_1d_;
 
 };
 #endif

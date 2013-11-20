@@ -228,11 +228,11 @@ bool DilepTrigAnalyzerRAW::analyzeTrigger(const edm::Event& iEvent, const edm::E
        << endl;
   assert (moduleIndex<m);
 
-  // // Results from TriggerEventWithRefs product
-  // electronIds_.clear();
-  // electronRefs_.clear();
-  // muonIds_.clear();
-  // muonRefs_.clear();
+  // Results from TriggerEventWithRefs product
+  electronIds_.clear();
+  electronRefs_.clear();
+  muonIds_.clear();
+  muonRefs_.clear();
   // jetIds_.clear();
   // jetRefs_.clear();
   // pixtrackIds_.clear();
@@ -248,39 +248,49 @@ bool DilepTrigAnalyzerRAW::analyzeTrigger(const edm::Event& iEvent, const edm::E
   // pfjetIds_.clear();
   // pfjetRefs_.clear();
 
-  // // Attention: must look only for modules actually run in this path
-  // // for this event!
-  // for (unsigned int j=0; j<=moduleIndex; ++j) {
-  //   const string& moduleLabel(moduleLabels[j]);
-  //   const string  moduleType(hltConfig_.moduleType(moduleLabel));
-  //   // check whether the module is packed up in TriggerEventWithRef product
-  //   const unsigned int filterIndex(triggerEventWithRefsHandle_->filterIndex(InputTag(moduleLabel,"",processName_)));
-  //   if (filterIndex<triggerEventWithRefsHandle_->size()) {
-  //     cout << " Filter in slot " << j << " - label/type " << moduleLabel << "/" << moduleType << endl;
-  //     cout << " Filter packed up at: " << filterIndex << endl;
-  //     cout << "  Accepted objects:" << endl;
+  // Attention: must look only for modules actually run in this path
+  // for this event!
+  for (unsigned int j=0; j<=moduleIndex; ++j) {
+    const string& moduleLabel(moduleLabels[j]);
+    const string  moduleType(hltConfig_.moduleType(moduleLabel));
+    // check whether the module is packed up in TriggerEventWithRef product
+    const unsigned int filterIndex(triggerEventWithRefsHandle_->filterIndex(InputTag(moduleLabel,"",processName_)));
+    if (filterIndex<triggerEventWithRefsHandle_->size()) {
+      cout << " Filter in slot " << j << " - label/type " << moduleLabel << "/" << moduleType << endl;
+      cout << " Filter packed up at: " << filterIndex << endl;
+      cout << "  Accepted objects:" << endl;
 
-  //     triggerEventWithRefsHandle_->getObjects(filterIndex,electronIds_,electronRefs_);
-  //     const unsigned int nElectrons(electronIds_.size());
-  //     if (nElectrons>0) {
-  // 	cout << "   Electrons: " << nElectrons << "  - the objects: # id pt" << endl;
-  // 	for (unsigned int i=0; i!=nElectrons; ++i) {
-  // 	  cout << "   " << i << " " << electronIds_[i]
-  // 	       << " " << electronRefs_[i]->pt()
-  // 	       << endl;
-  // 	}
-  //     }
+      triggerEventWithRefsHandle_->getObjects(filterIndex,electronIds_,electronRefs_);
+      const unsigned int nElectrons(electronIds_.size());
+      if (nElectrons>0) {
+  	cout << "   Electrons: " << nElectrons << "  - the objects: # id pt eta phi vz id key" << endl;
+  	for (unsigned int i=0; i!=nElectrons; ++i) {
+  	  cout << "   " << i << " " << electronIds_[i]
+  	       << " " << electronRefs_[i]->pt()
+  	       << " " << electronRefs_[i]->eta()
+  	       << " " << electronRefs_[i]->phi()
+  	       << " " << electronRefs_[i]->vz()
+  	       << " " << electronRefs_[i].id()
+  	       << " " << electronRefs_[i].key()
+  	       << endl;
+  	}
+      }
 
-  //     triggerEventWithRefsHandle_->getObjects(filterIndex,muonIds_,muonRefs_);
-  //     const unsigned int nMuons(muonIds_.size());
-  //     if (nMuons>0) {
-  // 	cout << "   Muons: " << nMuons << "  - the objects: # id pt" << endl;
-  // 	for (unsigned int i=0; i!=nMuons; ++i) {
-  // 	  cout << "   " << i << " " << muonIds_[i]
-  // 	       << " " << muonRefs_[i]->pt()
-  // 	       << endl;
-  // 	}
-  //     }
+      triggerEventWithRefsHandle_->getObjects(filterIndex,muonIds_,muonRefs_);
+      const unsigned int nMuons(muonIds_.size());
+      if (nMuons>0) {
+  	cout << "   Muons: " << nMuons << "  - the objects: # id pt eta phi vz id key" << endl;
+  	for (unsigned int i=0; i!=nMuons; ++i) {
+  	  cout << "   " << i << " " << muonIds_[i]
+  	       << " " << muonRefs_[i]->pt()
+  	       << " " << muonRefs_[i]->eta()
+  	       << " " << muonRefs_[i]->phi()
+  	       << " " << muonRefs_[i]->vz()
+  	       << " " << muonRefs_[i].id()
+  	       << " " << muonRefs_[i].key()
+  	       << endl;
+  	}
+      }
 
   //     triggerEventWithRefsHandle_->getObjects(filterIndex,jetIds_,jetRefs_);
   //     const unsigned int nJets(jetIds_.size());
@@ -348,8 +358,8 @@ bool DilepTrigAnalyzerRAW::analyzeTrigger(const edm::Event& iEvent, const edm::E
   // 	}
   //     }
 
-  //   }
-  // }
+    }
+  }
 
   return (wasRun && accept && !error);
 }
