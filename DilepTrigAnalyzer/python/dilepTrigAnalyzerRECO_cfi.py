@@ -7,5 +7,6 @@ dilepTrigAnalyzerRECO = cms.EDAnalyzer("DilepTrigAnalyzerRECO",
     triggerEventWithRefs = cms.InputTag("hltTriggerSummary","","HLT1"),
     electronsInputTag = cms.InputTag("gsfElectrons"),
     muonsInputTag = cms.InputTag("muons"),
+    vtxInputTag = cms.InputTag("offlinePrimaryVertices"),
     verbose = cms.bool(False)
 )
