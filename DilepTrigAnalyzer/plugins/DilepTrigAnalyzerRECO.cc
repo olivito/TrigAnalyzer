@@ -13,25 +13,11 @@
 #include "FWCore/Common/interface/TriggerResultsByName.h"
 #include "TrigAnalyzer/DilepTrigAnalyzer/interface/DilepTrigAnalyzerRECO.h"
 
-// need access to class objects being referenced to get their content!
-// #include "DataFormats/RecoCandidate/interface/RecoEcalCandidate.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/MuonReco/interface/MuonPFIsolation.h"
 #include "DataFormats/MuonReco/interface/MuonSelectors.h"
 #include "DataFormats/RecoCandidate/interface/RecoChargedCandidate.h"
-// #include "DataFormats/JetReco/interface/CaloJet.h"
-// #include "DataFormats/Candidate/interface/CompositeCandidate.h"
-// #include "DataFormats/METReco/interface/MET.h"
-// #include "DataFormats/METReco/interface/CaloMET.h"
-// #include "DataFormats/HcalIsolatedTrack/interface/IsolatedPixelTrackCandidate.h"
-// #include "DataFormats/L1Trigger/interface/L1HFRings.h"
-// #include "DataFormats/L1Trigger/interface/L1EmParticle.h"
-// #include "DataFormats/L1Trigger/interface/L1JetParticle.h"
-// #include "DataFormats/L1Trigger/interface/L1MuonParticle.h"
-// #include "DataFormats/L1Trigger/interface/L1EtMissParticle.h"
-// #include "DataFormats/JetReco/interface/PFJet.h"
-// #include "DataFormats/TauReco/interface/PFTau.h"
 
 // ROOT includes
 #include "Math/VectorUtil.h"
@@ -64,26 +50,6 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
        << "   MuonsInputTag = " << muonsInputTag_.encode() << endl
        << "   VtxInputTag = " << vtxInputTag_.encode() << endl
        << "   Verbose = " << verbose_ << endl;
-
-  // hltTriggerNames_.reserve(8);
-  // hltTriggerNames_.at(mm) = "HLT_Mu17_Mu8_v23";
-  // hltTriggerNames_.at(mmi) = "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_v1";
-  // hltTriggerNames_.at(mmtk) = "HLT_Mu17_TkMu8_v15";
-  // hltTriggerNames_.at(mmitk) = "HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_v1";
-  // hltTriggerNames_.at(em) = "HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v10";
-  // hltTriggerNames_.at(emi) = "HLT_Mu8_TrkIsoVVL_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v1";
-  // hltTriggerNames_.at(me) = "HLT_Mu17_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v10";
-  // hltTriggerNames_.at(mei) = "HLT_Mu17_TrkIsoVVL_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v1";
-
-  // hltShortNames_.reserve(8);
-  // hltShortNames_.at(mm) = "mm";
-  // hltShortNames_.at(mmi) = "mmi";
-  // hltShortNames_.at(mmtk) = "mmtk";
-  // hltShortNames_.at(mmitk) = "mmitk";
-  // hltShortNames_.at(em) = "em";
-  // hltShortNames_.at(emi) = "emi";
-  // hltShortNames_.at(me) = "me";
-  // hltShortNames_.at(mei) = "mei";
 
   hltTriggerNames_.push_back("HLT_Mu17_Mu8_v23");
   hltTriggerNames_.push_back("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_v1");
@@ -797,47 +763,3 @@ float DilepTrigAnalyzerRECO::muonPFiso(const reco::Muon& muon) {
 }
 
 
-// //____________________________________________________________________________
-// bool DilepTrigAnalyzerRECO::isTriggerPassed(const edm::Event& iEvent, const edm::EventSetup& iSetup, const std::string& triggerName) {
-
-//   const unsigned int n(hltConfig_.size());
-//   const unsigned int triggerIndex(hltConfig_.triggerIndex(triggerName));
-//   assert(triggerIndex==iEvent.triggerNames(*triggerResultsHandle_).triggerIndex(triggerName));
-
-//   // abort on invalid trigger name
-//   if (triggerIndex>=n) {
-//     std::cout << "DilepTrigAnalyzerRECO::isTriggerPassed: path "
-// 	      << triggerName << " - not found!" << std::endl;
-//     return false;
-//   }
-  
-//   bool wasRun = triggerResultsHandle_->wasrun(triggerIndex);
-//   bool accept = triggerResultsHandle_->accept(triggerIndex);
-//   bool error = triggerResultsHandle_->error(triggerIndex);
-
-//   return (wasRun && accept && !error);
-// }
-
-// //____________________________________________________________________________
-// std::string DilepTrigAnalyzerRECO::lastModuleLabel(const edm::Event& iEvent, const edm::EventSetup& iSetup, const std::string& triggerName) {
-
-//   const unsigned int n(hltConfig_.size());
-//   const unsigned int triggerIndex(hltConfig_.triggerIndex(triggerName));
-//   assert(triggerIndex==iEvent.triggerNames(*triggerResultsHandle_).triggerIndex(triggerName));
-
-//   // abort on invalid trigger name
-//   if (triggerIndex>=n) {
-//     std::cout << "DilepTrigAnalyzerRECO::lastModuleLabel: path "
-// 	      << triggerName << " - not found!" << std::endl;
-//     return false;
-//   }
-  
-//   // modules on this trigger path
-//   const unsigned int m(hltConfig_.size(triggerIndex));
-//   const std::vector<std::string>& moduleLabels(hltConfig_.moduleLabels(triggerIndex));
-
-//   const unsigned int moduleIndex(triggerResultsHandle_->index(triggerIndex));
-//   assert (moduleIndex<m);
-
-//   return moduleLabels[moduleIndex];
-// }
