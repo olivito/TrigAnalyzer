@@ -108,7 +108,7 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
   if (triggerName_ == "dimu") {
     h_results_mm_ = fs->make<TH1F>("h_results_mm" , ";Trigger Results" , 16 , -0.5 , 15.5 );
     for (unsigned int itrig=0; itrig<=(unsigned int)mmitk; ++itrig) {
-      bookHists(fs,hltShortNames_.at(itrig));
+      bookHists(fs,hltShortNames_.at(itrig),true);
       bookHists(fs,hltShortNames_.at(itrig)+"_tight");
       bookHists(fs,hltShortNames_.at(itrig)+"_trigiso");
       bookHists(fs,hltShortNames_.at(itrig)+"_tiso");
@@ -116,7 +116,7 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
   } else if (triggerName_ == "emu") {
     h_results_em_ = fs->make<TH1F>("h_results_em" , ";Trigger Results" , 16 , -0.5 , 15.5 );
     for (unsigned int itrig=(unsigned int)em; itrig<=(unsigned int)mei; ++itrig) {
-      bookHists(fs,hltShortNames_.at(itrig));
+      bookHists(fs,hltShortNames_.at(itrig),true);
       bookHists(fs,hltShortNames_.at(itrig)+"_tight");
       bookHists(fs,hltShortNames_.at(itrig)+"_trigiso");
       bookHists(fs,hltShortNames_.at(itrig)+"_tiso");
@@ -312,85 +312,97 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
   //  hlt objects
   //------------------------------------
 
-  // Results from TriggerEvent product - Attention: must look only for
-  // modules actually run in this path for this event!
-  const string& moduleLabel(moduleLabels[moduleIndex-1]);
-  const string  moduleType(hltConfig_.moduleType(moduleLabel));
-  // check whether the module is packed up in TriggerEvent product
-  const unsigned int filterIndex(triggerEventHandle_->filterIndex(InputTag(moduleLabel,"",processName_)));
-  if (!(filterIndex<triggerEventHandle_->sizeFilters())) {
-    cout << "DilepTrigAnalyzerRECO::analyzeTrigger: filterIndex out of range! triggerName: " << triggerName
-	 << ", filterIndex: " << filterIndex << ", sizeFilters(): " << triggerEventHandle_->sizeFilters() << std::endl;
-    return true;
-  }
-
-  if (verbose_) {
-    cout << " 'L3' filter in slot " << moduleIndex-1 << " - label/type " << moduleLabel << "/" << moduleType << endl;
-  }
-  const Vids& VIDS (triggerEventHandle_->filterIds(filterIndex));
-  const Keys& KEYS(triggerEventHandle_->filterKeys(filterIndex));
-  const size_type nI(VIDS.size());
-  const size_type nK(KEYS.size());
-  assert(nI==nK);
-  const size_type n(max(nI,nK));
-  if (verbose_) {
-    cout << "   " << n  << " accepted 'L3' objects found: " << endl;
-  }
+  bool foundMuons = false;
+  bool foundElectrons = ismm; // don't look for electrons on dimu trigger
 
   LorentzVector hlt_el_lead;
   LorentzVector hlt_el_subl;
   int hlt_el_lead_idx = -1;
   int hlt_el_subl_idx = -1;
+  //  int hlt_el_filter_idx = -1;
 
   LorentzVector hlt_mu_lead;
   LorentzVector hlt_mu_subl;
   int hlt_mu_lead_idx = -1;
   int hlt_mu_subl_idx = -1;
+  //  int hlt_mu_filter_idx = -1;
 
-  const TriggerObjectCollection& TOC(triggerEventHandle_->getObjects());
-  for (size_type i=0; i!=n; ++i) {
-    const TriggerObject& TO(TOC[KEYS[i]]);
-    LorentzVector lv( TO.particle().p4() );
-    // electrons
-    if (VIDS[i] == 82) {
-      if ( (hlt_el_lead_idx == -1) || (lv.pt() > hlt_el_lead.pt()) ) {
-	hlt_el_subl_idx = hlt_el_lead_idx;
-	hlt_el_subl = hlt_el_lead;
-	hlt_el_lead_idx = (int)i;
-	hlt_el_lead = lv;
-      } else if ( (hlt_el_subl_idx == -1) || (lv.pt() > hlt_el_subl.pt()) ) {
-	// check dR to remove exact duplicates
-	if (ROOT::Math::VectorUtil::DeltaR(hlt_el_lead,lv) > 0.001) {
-	  hlt_el_subl_idx = (int)i;
-	  hlt_el_subl = lv;
+  // Results from TriggerEvent product - Attention: must look only for
+  // modules actually run in this path for this event!
+  // -- loop backwards through modules to find last filter for each object type
+  //  for (unsigned int j=0; j<=moduleIndex; ++j) {
+  for (unsigned int j=moduleIndex; j!=0; --j) {
+    const string& moduleLabel(moduleLabels[j]);
+    const string  moduleType(hltConfig_.moduleType(moduleLabel));
+    // check whether the module is packed up in TriggerEvent product
+    const unsigned int filterIndex(triggerEventHandle_->filterIndex(InputTag(moduleLabel,"",processName_)));
+    if (filterIndex>=triggerEventHandle_->sizeFilters()) continue;
+    if (verbose_) cout << " 'L3' filter in slot " << j << " - label/type " << moduleLabel << "/" << moduleType << endl;
+    const Vids& VIDS (triggerEventHandle_->filterIds(filterIndex));
+    const Keys& KEYS(triggerEventHandle_->filterKeys(filterIndex));
+    const size_type nI(VIDS.size());
+    const size_type nK(KEYS.size());
+    assert(nI==nK);
+    const size_type n(max(nI,nK));
+    if (verbose_) cout << "   " << n  << " accepted 'L3' objects found: " << endl;
+    const TriggerObjectCollection& TOC(triggerEventHandle_->getObjects());
+    for (size_type i=0; i!=n; ++i) {
+      const TriggerObject& TO(TOC[KEYS[i]]);
+      LorentzVector lv( TO.particle().p4() );
+
+      // electrons
+      if (!foundElectrons && (VIDS[i] == 82)) {
+	if ( (hlt_el_lead_idx == -1) || (lv.pt() > hlt_el_lead.pt()) ) {
+	  hlt_el_subl_idx = hlt_el_lead_idx;
+	  hlt_el_subl = hlt_el_lead;
+	  hlt_el_lead_idx = (int)i;
+	  hlt_el_lead = lv;
+	} else if ( (hlt_el_subl_idx == -1) || (lv.pt() > hlt_el_subl.pt()) ) {
+	  // check dR to remove exact duplicates
+	  if (ROOT::Math::VectorUtil::DeltaR(hlt_el_lead,lv) > 0.001) {
+	    hlt_el_subl_idx = (int)i;
+	    hlt_el_subl = lv;
+	  }
 	}
-      }
-    }
-    // muons
-    else if (VIDS[i] == 83) {
-      if ( (hlt_mu_lead_idx == -1) || (lv.pt() > hlt_mu_lead.pt()) ) {
-	hlt_mu_subl_idx = hlt_mu_lead_idx;
-	hlt_mu_subl = hlt_mu_lead;
-	hlt_mu_lead_idx = (int)i;
-	hlt_mu_lead = lv;
-      } else if ( (hlt_mu_subl_idx == -1) || (lv.pt() > hlt_mu_subl.pt()) ) {
-	if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead,lv) > 0.001) {
-	  hlt_mu_subl_idx = (int)i;
-	  hlt_mu_subl = lv;
+      } // hlt electrons
+
+      // muons
+      else if (!foundMuons && (VIDS[i] == 83)) {
+	if ( (hlt_mu_lead_idx == -1) || (lv.pt() > hlt_mu_lead.pt()) ) {
+	  hlt_mu_subl_idx = hlt_mu_lead_idx;
+	  hlt_mu_subl = hlt_mu_lead;
+	  hlt_mu_lead_idx = (int)i;
+	  hlt_mu_lead = lv;
+	} else if ( (hlt_mu_subl_idx == -1) || (lv.pt() > hlt_mu_subl.pt()) ) {
+	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead,lv) > 0.001) {
+	    hlt_mu_subl_idx = (int)i;
+	    hlt_mu_subl = lv;
+	  }
 	}
+      } // hlt muons
+
+      if (verbose_) {
+	cout << "   " << i << " " << VIDS[i] << "/" << KEYS[i] << ": "
+	     << TO.id() << " " << TO.pt() << " " << TO.eta() << " " << TO.phi() << " " << TO.mass()
+	     << endl;
       }
+    } // loop on trig objects
+
+    if (hlt_el_lead_idx >= 0) {
+      foundElectrons = true;
+      //      hlt_el_filter_idx = filterIndex;
     }
 
-    // just need to apply cuts to trigger objects to find correct ones
-    if (verbose_) {
-      cout << "   " << i << " " << VIDS[i] << "/" << KEYS[i] << ": "
-	   << TO.id() << " " << TO.pt() << " " << TO.eta() << " " << TO.phi() << " " << TO.mass()
-	   << endl;
+    if (hlt_mu_lead_idx >= 0) {
+      foundMuons = true;
+      //      hlt_mu_filter_idx = filterIndex;
     }
-  }
+
+    if (foundElectrons && foundMuons) break;
+  } // backwards loop on modules
 
   if ((hlt_el_lead_idx == -1) && (hlt_mu_lead_idx == -1)) {
-    cout << "DilepTrigAnalyzerRECO::analyzeTrigger: no valid trigger leptons! n(obj) = " << n << endl;
+    cout << "DilepTrigAnalyzerRECO::analyzeTrigger: no valid trigger leptons!" << endl;
     return true;
   }
 
@@ -402,8 +414,6 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
   } else if (isme) {
     fillHists(hlt_mu_lead,hlt_el_lead,triggerShort,true);
   }
-
-  // now loop on reco electrons and muons
 
   //-------------------------------------
   //   reco vertices
@@ -636,65 +646,71 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     fillMuonIsoHists(muons_good,off_mu_lead_idx,off_mu_subl_idx,triggerShort);
     if (off_mu_tight_lead_idx >= 0) {
       fillHists(off_mu_tight_lead,off_mu_tight_subl,triggerShort+"_tight",false);
-      fillMuonIsoHists(muons_good,off_mu_tight_lead_idx,off_mu_tight_subl_idx,triggerShort);
+      fillMuonIsoHists(muons_good,off_mu_tight_lead_idx,off_mu_tight_subl_idx,triggerShort+"_tight");
     }
     if (off_mu_trigiso_lead_idx >= 0) {
       fillHists(off_mu_trigiso_lead,off_mu_trigiso_subl,triggerShort+"_trigiso",false);
-      fillMuonIsoHists(muons_good,off_mu_trigiso_lead_idx,off_mu_trigiso_subl_idx,triggerShort);
+      fillMuonIsoHists(muons_good,off_mu_trigiso_lead_idx,off_mu_trigiso_subl_idx,triggerShort+"_trigiso");
     }
     if (off_mu_tiso_lead_idx >= 0) {
       fillHists(off_mu_tiso_lead,off_mu_tiso_subl,triggerShort+"_tiso",false);
-      fillMuonIsoHists(muons_good,off_mu_tiso_lead_idx,off_mu_tiso_subl_idx,triggerShort);
+      fillMuonIsoHists(muons_good,off_mu_tiso_lead_idx,off_mu_tiso_subl_idx,triggerShort+"_tiso");
     }
-  } else if (isem) {
+  } // ismm
+
+  else if (isem) {
     fillHists(off_el_lead,off_mu_lead,triggerShort,false);
-    fillMuonIsoHists(muons_good,off_mu_lead_idx,-1,triggerShort);
+    fillMuonIsoHists(muons_good,-1,off_mu_lead_idx,triggerShort);
     if (off_mu_tight_lead_idx >= 0) {
       fillHists(off_el_lead,off_mu_tight_lead,triggerShort+"_tight",false);
-      fillMuonIsoHists(muons_good,-1,off_mu_tight_lead_idx,triggerShort);
+      fillMuonIsoHists(muons_good,-1,off_mu_tight_lead_idx,triggerShort+"_tight");
     }
     if (off_mu_trigiso_lead_idx >= 0) {
       fillHists(off_el_lead,off_mu_trigiso_lead,triggerShort+"_trigiso",false);
-      fillMuonIsoHists(muons_good,-1,off_mu_trigiso_lead_idx,triggerShort);
+      fillMuonIsoHists(muons_good,-1,off_mu_trigiso_lead_idx,triggerShort+"_trigiso");
     }
     if (off_mu_tiso_lead_idx >= 0) {
       fillHists(off_el_lead,off_mu_tiso_lead,triggerShort+"_tiso",false);
-      fillMuonIsoHists(muons_good,-1,off_mu_tiso_lead_idx,triggerShort);
+      fillMuonIsoHists(muons_good,-1,off_mu_tiso_lead_idx,triggerShort+"_tiso");
     }
-  } else if (isme) {
+  } // isem
+
+  else if (isme) {
     fillHists(off_mu_lead,off_el_lead,triggerShort,false);
     fillMuonIsoHists(muons_good,off_mu_lead_idx,-1,triggerShort);
     if (off_mu_tight_lead_idx >= 0) {
       fillHists(off_mu_tight_lead,off_el_lead,triggerShort+"_tight",false);
-      fillMuonIsoHists(muons_good,off_mu_tight_lead_idx,-1,triggerShort);
+      fillMuonIsoHists(muons_good,off_mu_tight_lead_idx,-1,triggerShort+"_tight");
     }
     if (off_mu_trigiso_lead_idx >= 0) {
       fillHists(off_mu_trigiso_lead,off_el_lead,triggerShort+"_trigiso",false);
-      fillMuonIsoHists(muons_good,off_mu_trigiso_lead_idx,-1,triggerShort);
+      fillMuonIsoHists(muons_good,off_mu_trigiso_lead_idx,-1,triggerShort+"_trigiso");
     }
     if (off_mu_tiso_lead_idx >= 0) {
       fillHists(off_mu_tiso_lead,off_el_lead,triggerShort+"_tiso",false);
-      fillMuonIsoHists(muons_good,off_mu_tiso_lead_idx,-1,triggerShort);
+      fillMuonIsoHists(muons_good,off_mu_tiso_lead_idx,-1,triggerShort+"_tiso");
     }
-  }
+  } // isme
 
   return true;
 }
 
 //____________________________________________________________________________
-void DilepTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const std::string& suffix) {
+void DilepTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const std::string& suffix, bool hlt) {
 
   std::string suf(suffix);
   if (suffix.size()) suf = "_"+suffix;
 
   std::string hlt_suf("_hlt");
 
-  hists_1d_["h_lead_pt"+suf+hlt_suf] = fs->make<TH1F>(Form("h_lead_pt%s%s",suf.c_str(),hlt_suf.c_str()) , "; HLT Leading p_{T} [GeV]" , 100 , 0. , 100. );
-  hists_1d_["h_subl_pt"+suf+hlt_suf] = fs->make<TH1F>(Form("h_subl_pt%s%s",suf.c_str(),hlt_suf.c_str()) , "; HLT Subleading p_{T} [GeV]" , 100 , 0. , 100. );
-  hists_1d_["h_lead_eta"+suf+hlt_suf] = fs->make<TH1F>(Form("h_lead_eta%s%s",suf.c_str(),hlt_suf.c_str()) , "; HLT Leading #eta" , 100 , -3. , 3. );
-  hists_1d_["h_subl_eta"+suf+hlt_suf] = fs->make<TH1F>(Form("h_subl_eta%s%s",suf.c_str(),hlt_suf.c_str()) , "; HLT Subleading #eta" , 100 , -3. , 3. );
-  hists_1d_["h_mll"+suf+hlt_suf] = fs->make<TH1F>(Form("h_mll%s%s",suf.c_str(),hlt_suf.c_str()) , "; HLT M_{ll} [GeV]" , 150 , 0. , 150. );
-  hists_1d_["h_dr"+suf+hlt_suf] = fs->make<TH1F>(Form("h_dr%s%s",suf.c_str(),hlt_suf.c_str()) , "; HLT #DeltaR" , 600 , 0. , 6. );
+  if (hlt) {
+    hists_1d_["h_lead_pt"+suf+hlt_suf] = fs->make<TH1F>(Form("h_lead_pt%s%s",suf.c_str(),hlt_suf.c_str()) , "; HLT Leading p_{T} [GeV]" , 100 , 0. , 100. );
+    hists_1d_["h_subl_pt"+suf+hlt_suf] = fs->make<TH1F>(Form("h_subl_pt%s%s",suf.c_str(),hlt_suf.c_str()) , "; HLT Subleading p_{T} [GeV]" , 100 , 0. , 100. );
+    hists_1d_["h_lead_eta"+suf+hlt_suf] = fs->make<TH1F>(Form("h_lead_eta%s%s",suf.c_str(),hlt_suf.c_str()) , "; HLT Leading #eta" , 100 , -3. , 3. );
+    hists_1d_["h_subl_eta"+suf+hlt_suf] = fs->make<TH1F>(Form("h_subl_eta%s%s",suf.c_str(),hlt_suf.c_str()) , "; HLT Subleading #eta" , 100 , -3. , 3. );
+    hists_1d_["h_mll"+suf+hlt_suf] = fs->make<TH1F>(Form("h_mll%s%s",suf.c_str(),hlt_suf.c_str()) , "; HLT M_{ll} [GeV]" , 150 , 0. , 150. );
+    hists_1d_["h_dr"+suf+hlt_suf] = fs->make<TH1F>(Form("h_dr%s%s",suf.c_str(),hlt_suf.c_str()) , "; HLT #DeltaR" , 600 , 0. , 6. );
+  }
 
   hists_1d_["h_lead_pt"+suf] = fs->make<TH1F>(Form("h_lead_pt%s",suf.c_str()) , "; Leading p_{T} [GeV]" , 100 , 0. , 100. );
   hists_1d_["h_subl_pt"+suf] = fs->make<TH1F>(Form("h_subl_pt%s",suf.c_str()) , "; Subleading p_{T} [GeV]" , 100 , 0. , 100. );
@@ -753,12 +769,12 @@ void DilepTrigAnalyzerRECO::fillMuonIsoHists(const reco::MuonCollection& col, co
   if (lead_idx >= 0) {
     float reltrkiso = col.at(lead_idx).pfIsolationR03().sumChargedHadronPt/col.at(lead_idx).pt();
     hists_1d_["h_lead_reltrkiso"+suf]->Fill(reltrkiso);
-    hists_1d_["h_lead_reltrkiso"+suf]->Fill(muonPFiso(col.at(lead_idx)));
+    hists_1d_["h_lead_relpfiso"+suf]->Fill(muonPFiso(col.at(lead_idx)));
   }
   if (subl_idx >= 0) {
     float reltrkiso = col.at(subl_idx).pfIsolationR03().sumChargedHadronPt/col.at(subl_idx).pt();
     hists_1d_["h_subl_reltrkiso"+suf]->Fill(reltrkiso);
-    hists_1d_["h_subl_reltrkiso"+suf]->Fill(muonPFiso(col.at(subl_idx)));
+    hists_1d_["h_subl_relpfiso"+suf]->Fill(muonPFiso(col.at(subl_idx)));
   }
 
   return;

@@ -52,7 +52,7 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   // bool isTriggerPassed(const edm::Event& iEvent, const edm::EventSetup& iSetup, const std::string& triggerName);
   // std::string lastModuleLabel(const edm::Event& iEvent, const edm::EventSetup& iSetup, const std::string& triggerName);
 
-  void bookHists(edm::Service<TFileService>& fs, const std::string& suffix);
+  void bookHists(edm::Service<TFileService>& fs, const std::string& suffix, bool hlt = false);
   void fillHists(const LorentzVector& lead, const LorentzVector& subl, const std::string& suffix, bool hlt);
   void fillMuonIsoHists(const reco::MuonCollection& col, const int& lead_idx, const int& subl_idx, const std::string& suffix);
 
