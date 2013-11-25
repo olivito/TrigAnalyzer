@@ -52,6 +52,7 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   void bookHists(edm::Service<TFileService>& fs, const std::string& suffix, bool hlt = false);
   void fillHists(const LorentzVector& lead, const LorentzVector& subl, const std::string& suffix, bool hlt);
   void fillMuonIsoHists(const reco::MuonCollection& col, const int& lead_idx, const int& subl_idx, const std::string& suffix);
+  void fillHistsRecoHLT(const LorentzVector& off_lead, const LorentzVector& off_subl, const LorentzVector& hlt_lead, const LorentzVector& hlt_subl, const std::string& suffix, bool isem = false);
 
   float muonPFiso(const reco::Muon& mu);
 
