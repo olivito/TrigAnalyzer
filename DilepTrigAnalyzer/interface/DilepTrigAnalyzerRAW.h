@@ -43,6 +43,7 @@ class DilepTrigAnalyzerRAW : public edm::EDAnalyzer {
   std::string   triggerName_;
   edm::InputTag triggerResultsTag_;
   edm::InputTag triggerEventWithRefsTag_;
+  edm::InputTag isoDepMapTag_;
 
   /// additional class data memebers
   edm::Handle<edm::TriggerResults>           triggerResultsHandle_;

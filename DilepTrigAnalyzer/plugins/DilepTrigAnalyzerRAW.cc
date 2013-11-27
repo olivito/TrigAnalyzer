@@ -29,6 +29,8 @@
 #include "DataFormats/L1Trigger/interface/L1EtMissParticle.h"
 #include "DataFormats/JetReco/interface/PFJet.h"
 #include "DataFormats/TauReco/interface/PFTau.h"
+#include "DataFormats/RecoCandidate/interface/IsoDeposit.h"
+#include "DataFormats/RecoCandidate/interface/IsoDepositFwd.h"
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
@@ -43,7 +45,8 @@ DilepTrigAnalyzerRAW::DilepTrigAnalyzerRAW(const edm::ParameterSet& ps) :
   processName_(ps.getParameter<std::string>("processName")),
   triggerName_(ps.getParameter<std::string>("triggerName")),
   triggerResultsTag_(ps.getParameter<edm::InputTag>("triggerResults")),
-  triggerEventWithRefsTag_(ps.getParameter<edm::InputTag>("triggerEventWithRefs"))
+  triggerEventWithRefsTag_(ps.getParameter<edm::InputTag>("triggerEventWithRefs")),
+  isoDepMapTag_(ps.getParameter<edm::InputTag>("isoDepMap"))
 {
   using namespace std;
   using namespace edm;
@@ -52,7 +55,8 @@ DilepTrigAnalyzerRAW::DilepTrigAnalyzerRAW(const edm::ParameterSet& ps) :
        << "   ProcessName = " << processName_ << endl
        << "   TriggerName = " << triggerName_ << endl
        << "   TriggerResultsTag = " << triggerResultsTag_.encode() << endl
-       << "   TriggerEventWithRefsTag = " << triggerEventWithRefsTag_.encode() << endl;
+       << "   TriggerEventWithRefsTag = " << triggerEventWithRefsTag_.encode() << endl
+       << "   IsoDepMapTag = " << isoDepMapTag_.encode() << endl;
 
   dimuTriggerNames_.push_back("HLT_Mu17_Mu8_v23");
   dimuTriggerNames_.push_back("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_v1");
@@ -279,6 +283,18 @@ bool DilepTrigAnalyzerRAW::analyzeTrigger(const edm::Event& iEvent, const edm::E
       triggerEventWithRefsHandle_->getObjects(filterIndex,muonIds_,muonRefs_);
       const unsigned int nMuons(muonIds_.size());
       if (nMuons>0) {
+
+	bool isovals = false;
+	//	Handle<edm::ValueMap<reco::IsoDeposit> > depMap;
+	Handle<edm::ValueMap<float> > depMap;
+
+	//	if (moduleLabel == "hltDiMuonGlb17Trk8DzFiltered0p2TrkIsoFiltered0p4") {
+	if (moduleLabel == "hltDiMuonGlb17Trk8DzFiltered0p2") {
+	  cout << "found the module before iso! hurray!" << endl;
+	  iEvent.getByLabel(isoDepMapTag_,depMap);
+	  isovals = true;
+	}
+
   	cout << "   Muons: " << nMuons << "  - the objects: # id pt eta phi vz id key" << endl;
   	for (unsigned int i=0; i!=nMuons; ++i) {
   	  cout << "   " << i << " " << muonIds_[i]
@@ -287,8 +303,15 @@ bool DilepTrigAnalyzerRAW::analyzeTrigger(const edm::Event& iEvent, const edm::E
   	       << " " << muonRefs_[i]->phi()
   	       << " " << muonRefs_[i]->vz()
   	       << " " << muonRefs_[i].id()
-  	       << " " << muonRefs_[i].key()
-  	       << endl;
+  	       << " " << muonRefs_[i].key();
+	  if (isovals) {
+	    const edm::ValueMap<float> ::value_type & muonDeposit = (*(depMap))[muonRefs_[i]];
+	    cout << ", isoval: " << muonDeposit << endl;
+	    // const edm::ValueMap<reco::IsoDeposit> ::value_type & muonDeposit = (*(depMap))[muonRefs_[i]];
+	    // cout << ", isoval: " << muonDeposit.sumWithin(0.3) 
+	    // 	 << ", muonDeposit: " << muonDeposit.print() << endl;
+	  }
+  	  cout << endl;
   	}
       }
 
