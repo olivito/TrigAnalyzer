@@ -20,6 +20,8 @@
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 #include "DataFormats/Common/interface/TriggerResults.h"
 #include "DataFormats/HLTReco/interface/TriggerEvent.h"
+#include "DataFormats/HLTReco/interface/TriggerEventWithRefs.h"
+
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "DataFormats/EgammaCandidates/interface/GsfElectronFwd.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
@@ -37,6 +39,14 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   
   typedef math::XYZTLorentzVectorF LorentzVector;
 
+  struct StudyLepton {
+    LorentzVector lv;
+    float trkiso;
+    float pfiso;
+    int type;
+    bool isHLT;
+  };
+
  public:
   explicit DilepTrigAnalyzerRECO(const edm::ParameterSet&);
   ~DilepTrigAnalyzerRECO();
@@ -50,9 +60,11 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
  private:
 
   void bookHists(edm::Service<TFileService>& fs, const std::string& suffix, bool hlt = false);
-  void fillHists(const LorentzVector& lead, const LorentzVector& subl, const std::string& suffix, bool hlt);
-  void fillMuonIsoHists(const reco::MuonCollection& col, const int& lead_idx, const int& subl_idx, const std::string& suffix);
-  void fillHistsRecoHLT(const LorentzVector& off_lead, const LorentzVector& off_subl, const LorentzVector& hlt_lead, const LorentzVector& hlt_subl, const std::string& suffix, bool isem = false);
+  // void fillHists(const LorentzVector& lead, const LorentzVector& subl, const std::string& suffix, bool hlt);
+  // void fillMuonIsoHists(const reco::MuonCollection& col, const int& lead_idx, const int& subl_idx, const std::string& suffix);
+  // void fillHistsRecoHLT(const LorentzVector& off_lead, const LorentzVector& off_subl, const LorentzVector& hlt_lead, const LorentzVector& hlt_subl, const std::string& suffix, bool isem = false);
+  void fillHists(const StudyLepton& lead, const StudyLepton& subl, const std::string& suffix, bool isHLT = false);
+  void fillHistsRecoHLT(const StudyLepton& off_lead, const StudyLepton& off_subl, const StudyLepton& hlt_lead, const StudyLepton& hlt_subl, const std::string& suffix);
 
   float muonPFiso(const reco::Muon& mu);
 
@@ -61,14 +73,18 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   std::string   triggerName_;
   edm::InputTag triggerResultsTag_;
   edm::InputTag triggerEventTag_;
+  edm::InputTag triggerEventWithRefsTag_;
   edm::InputTag electronsInputTag_;
   edm::InputTag muonsInputTag_;
   edm::InputTag vtxInputTag_;
+  edm::InputTag isoValMapGblTag_;
+  edm::InputTag isoValMapTrkTag_;
   bool verbose_;
 
   /// additional class data memebers
   edm::Handle<edm::TriggerResults>           triggerResultsHandle_;
   edm::Handle<trigger::TriggerEvent> triggerEventHandle_;
+  edm::Handle<trigger::TriggerEventWithRefs> triggerEventWithRefsHandle_;
   HLTConfigProvider hltConfig_;
   std::vector<std::string> hltTriggerNames_;
   std::vector<std::string> hltShortNames_;
@@ -78,8 +94,14 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   edm::Handle<reco::GsfElectronCollection> elsHandle_;
   edm::Handle<reco::MuonCollection> musHandle_;
 
-
   std::map<std::string,TH1F*> hists_1d_;
+
+  /// payload extracted from TriggerEventWithRefs
+
+  trigger::Vids        electronIds_;
+  trigger::VRelectron  electronRefs_;
+  trigger::Vids        muonIds_;
+  trigger::VRmuon      muonRefs_;
 
 };
 #endif
