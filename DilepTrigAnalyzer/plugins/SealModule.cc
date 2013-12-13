@@ -3,6 +3,8 @@
 
 #include "TrigAnalyzer/DilepTrigAnalyzer/interface/DilepTrigAnalyzerRAW.h"
 #include "TrigAnalyzer/DilepTrigAnalyzer/interface/DilepTrigAnalyzerRECO.h"
+#include "TrigAnalyzer/DilepTrigAnalyzer/interface/TrackCompAnalyzer.h"
 
 DEFINE_FWK_MODULE(DilepTrigAnalyzerRAW);
 DEFINE_FWK_MODULE(DilepTrigAnalyzerRECO);
+DEFINE_FWK_MODULE(TrackCompAnalyzer);
