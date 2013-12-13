@@ -383,11 +383,10 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     if (nMuons>0) {
 
       bool isovals = false;
-      //      bool trkmuons = false;
       Handle<edm::ValueMap<float> > isoValMapGblHandle;
       Handle<edm::ValueMap<float> > isoValMapTrkHandle;
 
-      // mm / em / me cases
+      // mm / em / me / mmtk cases
       if ( (moduleLabel.find("hltDiMuonGlb17Glb8DzFiltered0p2") != string::npos) ||
 	   (moduleLabel.find("hltL1Mu12EG7L3MuFiltered17") != string::npos) ||
 	   (moduleLabel.find("hltL1sL1Mu3p5EG12ORL1MuOpenEG12L3Filtered8") != string::npos) || 
@@ -420,7 +419,6 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	}
 
 	isovals = true;
-	//        if (moduleLabel.find("hltDiMuonGlb17Trk8DzFiltered0p2") != string::npos) trkmuons = true;
       } // filter before/after iso
 
       if (verbose_) {
@@ -934,6 +932,12 @@ void DilepTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const std:
   hists_1d_["h_lead_offhlt_dr"+suf] = fs->make<TH1F>(Form("h_lead_offhlt_dr%s",suf.c_str()) , "; Leading #DeltaR(off,HLT)" , 600 , 0. , 6. );
   hists_1d_["h_subl_offhlt_dr"+suf] = fs->make<TH1F>(Form("h_subl_offhlt_dr%s",suf.c_str()) , "; Subleading #DeltaR(off,HLT)" , 600 , 0. , 6. );
 
+  hists_2d_["h_lead_abstrkiso_hlt_vs_off"+suf] = fs->make<TH2F>(Form("h_lead_abstrkiso_hlt_vs_off%s",suf.c_str()) , "; Leading offline trkiso [GeV]; Leading HLT trkiso [GeV]" , 50 , 0. , 10. , 50 , 0. , 10. );
+  hists_2d_["h_subl_abstrkiso_hlt_vs_off"+suf] = fs->make<TH2F>(Form("h_subl_abstrkiso_hlt_vs_off%s",suf.c_str()) , "; Subleading offline trkiso [GeV]; Subleading HLT trkiso [GeV]" , 50 , 0. , 10. , 50 , 0. , 10. );
+  hists_2d_["h_lead_reltrkiso_hlt_vs_off"+suf] = fs->make<TH2F>(Form("h_lead_reltrkiso_hlt_vs_off%s",suf.c_str()) , "; Leading offline trkiso / p_{T}; Leading HLT trkiso / p_{T}" , 50 , 0. , 2. , 50 , 0. , 2. );
+  hists_2d_["h_subl_reltrkiso_hlt_vs_off"+suf] = fs->make<TH2F>(Form("h_subl_reltrkiso_hlt_vs_off%s",suf.c_str()) , "; Subleading offline trkiso / p_{T}; Subleading HLT trkiso / p_{T}" , 50 , 0. , 2. , 50 , 0. , 2. );
+
+
   return;
 }
 
@@ -1002,6 +1006,10 @@ void DilepTrigAnalyzerRECO::fillHistsRecoHLT(const StudyLepton& off_lead, const 
       if (dr_hlt_lead < 0.2) {
 	hists_1d_["h_lead_offhlt_dpt"+suf]->Fill( (off_lead.lv.pt() - hlt_lead.lv.pt()) / off_lead.lv.pt() );
 	hists_1d_["h_lead_offhlt_dr"+suf]->Fill(dr_hlt_lead);
+	if (off_lead.type == 13) {
+	  hists_2d_["h_lead_abstrkiso_hlt_vs_off"+suf]->Fill(off_lead.trkiso,hlt_lead.trkiso);
+	  hists_2d_["h_lead_reltrkiso_hlt_vs_off"+suf]->Fill(off_lead.trkiso/off_lead.lv.pt(),hlt_lead.trkiso/hlt_lead.lv.pt());
+	}
 	match_lead = true;
       }
     } // valid hlt_lead
@@ -1011,6 +1019,10 @@ void DilepTrigAnalyzerRECO::fillHistsRecoHLT(const StudyLepton& off_lead, const 
       if (dr_hlt_subl < 0.2) {
 	hists_1d_["h_lead_offhlt_dpt"+suf]->Fill( (off_lead.lv.pt() - hlt_subl.lv.pt()) / off_lead.lv.pt() );
 	hists_1d_["h_lead_offhlt_dr"+suf]->Fill(dr_hlt_subl);
+	if (off_lead.type == 13) {
+	  hists_2d_["h_lead_abstrkiso_hlt_vs_off"+suf]->Fill(off_lead.trkiso,hlt_subl.trkiso);
+	  hists_2d_["h_lead_reltrkiso_hlt_vs_off"+suf]->Fill(off_lead.trkiso/off_lead.lv.pt(),hlt_subl.trkiso/hlt_subl.lv.pt());
+	}
       }
     } // hlt_subl
   } // valid off_lead
@@ -1023,6 +1035,10 @@ void DilepTrigAnalyzerRECO::fillHistsRecoHLT(const StudyLepton& off_lead, const 
       if (dr_hlt_lead < 0.2) {
 	hists_1d_["h_subl_offhlt_dpt"+suf]->Fill( (off_subl.lv.pt() - hlt_lead.lv.pt()) / off_subl.lv.pt() );
 	hists_1d_["h_subl_offhlt_dr"+suf]->Fill(dr_hlt_lead);
+	if (off_subl.type == 13) {
+	  hists_2d_["h_subl_abstrkiso_hlt_vs_off"+suf]->Fill(off_subl.trkiso,hlt_lead.trkiso);
+	  hists_2d_["h_subl_reltrkiso_hlt_vs_off"+suf]->Fill(off_subl.trkiso/off_subl.lv.pt(),hlt_lead.trkiso/hlt_lead.lv.pt());
+	}
 	match_lead = true;
       }
     } // valid hlt_lead
@@ -1031,6 +1047,10 @@ void DilepTrigAnalyzerRECO::fillHistsRecoHLT(const StudyLepton& off_lead, const 
       if (dr_hlt_subl < 0.2) {
 	hists_1d_["h_subl_offhlt_dpt"+suf]->Fill( (off_subl.lv.pt() - hlt_subl.lv.pt()) / off_subl.lv.pt() );
 	hists_1d_["h_subl_offhlt_dr"+suf]->Fill(dr_hlt_subl);
+	if (off_subl.type == 13) {
+	  hists_2d_["h_subl_abstrkiso_hlt_vs_off"+suf]->Fill(off_subl.trkiso,hlt_subl.trkiso);
+	  hists_2d_["h_subl_reltrkiso_hlt_vs_off"+suf]->Fill(off_subl.trkiso/off_subl.lv.pt(),hlt_subl.trkiso/hlt_subl.lv.pt());
+	}
       }
     } // hlt_subl
   } // valid off_subl

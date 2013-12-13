@@ -31,6 +31,7 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 
 #include "TH1.h"
+#include "TH2.h"
 
 //
 // class declaration
@@ -95,6 +96,7 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   edm::Handle<reco::MuonCollection> musHandle_;
 
   std::map<std::string,TH1F*> hists_1d_;
+  std::map<std::string,TH2F*> hists_2d_;
 
   /// payload extracted from TriggerEventWithRefs
 
