@@ -39,20 +39,22 @@ TrackCompAnalyzer::TrackCompAnalyzer(const edm::ParameterSet& ps) :
   triggerEventWithRefsTag_(ps.getParameter<edm::InputTag>("triggerEventWithRefs")),
   hltTracksInputTag_(ps.getParameter<edm::InputTag>("hltTracksInputTag")),
   offlineTracksInputTag_(ps.getParameter<edm::InputTag>("offlineTracksInputTag")),
+  beamSpotInputTag_(ps.getParameter<edm::InputTag>("beamSpotInputTag")),
   verbose_(ps.getParameter<bool>("verbose"))
 {
   using namespace std;
   using namespace edm;
 
   cout << "TrackCompAnalyzer configuration: " << endl
-       << "   ProcessName = " << processName_ << endl
-       << "   TriggerName = " << triggerName_ << endl
-       << "   TriggerResultsTag = " << triggerResultsTag_.encode() << endl
-       << "   TriggerEventTag = " << triggerEventTag_.encode() << endl
-       << "   TriggerEventWithRefsTag = " << triggerEventWithRefsTag_.encode() << endl
+       << "   processName = " << processName_ << endl
+       << "   triggerName = " << triggerName_ << endl
+       << "   triggerResultsTag = " << triggerResultsTag_.encode() << endl
+       << "   triggerEventTag = " << triggerEventTag_.encode() << endl
+       << "   triggerEventWithRefsTag = " << triggerEventWithRefsTag_.encode() << endl
        << "   hltTracksInputTag = " << hltTracksInputTag_.encode() << endl
        << "   offlineTracksInputTag = " << offlineTracksInputTag_.encode() << endl
-       << "   Verbose = " << verbose_ << endl;
+       << "   beamSpotInputTag = " << beamSpotInputTag_.encode() << endl
+       << "   verbose = " << verbose_ << endl;
 
   // hltTriggerNames_.push_back("HLT_Mu17_Mu8_v23");
   // hltTriggerNames_.push_back("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_v1");
@@ -65,11 +67,16 @@ TrackCompAnalyzer::TrackCompAnalyzer(const edm::ParameterSet& ps) :
 
   // histogram setup
   edm::Service<TFileService> fs;
-  bookHists(fs,"offall");
-  bookHists(fs,"offreg");
-  bookHists(fs,"offonly");
+  bookHists(fs,"offall_iter0");
+  bookHists(fs,"offreg_iter0");
+  bookHists(fs,"offonly_iter0");
+  bookHists(fs,"offall_others");
+  bookHists(fs,"offreg_others");
+  bookHists(fs,"offonly_others");
   bookHists(fs,"hlt");
   bookHists(fs,"hltonly");
+  hists_1d_["h_drmin_hltonly"] = fs->make<TH1F>(Form("h_drmin_hltonly") , "; min #DeltaR(off,HLT)" , 600 , 0. , 6. );
+  //  hists_1d_["h_dphi_offmu"] = fs->make<TH1F>(Form("h_dphi_offmu") , "; #Delta#phi(off,#mu)" , 600 , -2*ROOT::Math::Pi() , 2*ROOT::Math::Pi() );
   bookHistsRecoHLT(fs,"offhlt");
 
 }
@@ -143,6 +150,7 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
   // retrieve necessary containers
   iEvent.getByLabel(hltTracksInputTag_, hltTracksHandle_);
   iEvent.getByLabel(offlineTracksInputTag_, offlineTracksHandle_);
+  iEvent.getByLabel(beamSpotInputTag_,beamSpotHandle_);
 
   if (verbose_) cout << endl;
 
@@ -341,31 +349,36 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
   // loop on offline tracks, select those within the online tracking regions
   //  make plots for offline tracks, check for online matches
-  TrackCollection offlineTracksCollectionReg;
+  //  TrackCollection offlineTracksCollectionReg;
   for ( TrackCollection::const_iterator off_trk = offlineTracksCollection->begin(); off_trk != offlineEnd; ++off_trk ) {
     // check for iter0 (algo 4) and high purity
-    if (off_trk->algo() != 4) continue;
+    //    if (off_trk->algo() != 4) continue;
     if (!off_trk->quality(TrackBase::highPurity)) continue;
 
-    fillHists(*off_trk,"offall");
+    if (off_trk->algo() == 4) fillHists(*off_trk,"offall_iter0");
+    else fillHists(*off_trk,"offall_others");
 
     // check for region around hlt muons
     bool region = false;
     for (unsigned int ihlt=0; ihlt < hlt_mus.size(); ++ihlt) {
-      if ( (fabs(hlt_mus.at(ihlt).eta() - off_trk->eta()) < 0.5) &&
-	   (fabs(ROOT::Math::VectorUtil::Phi_mpi_pi(hlt_mus.at(ihlt).phi() - off_trk->phi())) < 0.5) ) {
-	region = true;
-	break;
+      float dphi = delta_phi(hlt_mus.at(ihlt).phi(),off_trk->phi());
+      if ( (fabs(hlt_mus.at(ihlt).eta() - off_trk->eta()) < 0.5) && (fabs(dphi) < 0.5) ) {
+      	region = true;
+      	break;
       }
     } // loop over hlt muons
-    if (!region) continue;
+    //    if (!region) continue;
 
-    fillHists(*off_trk,"offreg");
-    offlineTracksCollectionReg.push_back(*off_trk);
+    if (region) {
+      if (off_trk->algo() == 4) fillHists(*off_trk,"offreg_iter0");
+      else fillHists(*off_trk,"offreg_others");
+    }
+    // offlineTracksCollectionReg.push_back(*off_trk);
 
     if (verbose_) {
       cout << " - offline track: pt: " << off_trk->pt() << ", eta: " << off_trk->eta()
-	   << ", phi: " << off_trk->phi() << ", nhits: " << off_trk->numberOfValidHits() << endl;
+	   << ", phi: " << off_trk->phi() << ", nhits: " << off_trk->numberOfValidHits() 
+	   << ", algo: " << off_trk->algo() << endl;
     }
 
     // next match to hlt tracks
@@ -387,8 +400,9 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 	     << ", phi: " << hlt_match->phi() << ", nhits: " << hlt_match->numberOfValidHits() << endl;
       }
     } 
-    else {
-      fillHists(*off_trk,"offonly");
+    else if (region) {
+      if (off_trk->algo() == 4) fillHists(*off_trk,"offonly_iter0");
+      else fillHists(*off_trk,"offonly_others");
     }
 
   } // off track loop
@@ -397,7 +411,7 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
   // loop on hlt tracks, make plots
   //  also check for offline matches, plot online only tracks
-  const TrackCollection::const_iterator offlineRegEnd = offlineTracksCollectionReg.end();
+  //  const TrackCollection::const_iterator offlineRegEnd = offlineTracksCollectionReg.end();
   for ( TrackCollection::const_iterator hlt_trk = hltTracksCollection->begin(); hlt_trk != hltEnd; ++hlt_trk ) {
 
     // check dR from hlt muons: those tracks aren't used in track iso
@@ -413,7 +427,7 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     fillHists(*hlt_trk,"hlt");
 
     float mindr = 99.;
-    for ( TrackCollection::const_iterator off_trk = offlineTracksCollectionReg.begin(); off_trk != offlineRegEnd; ++off_trk ) {
+    for ( TrackCollection::const_iterator off_trk = offlineTracksCollection->begin(); off_trk != offlineEnd; ++off_trk ) {
       float dr = ROOT::Math::VectorUtil::DeltaR(off_trk->momentum(),hlt_trk->momentum());
       if (dr < mindr) mindr = dr;
     } // off reg track loop
@@ -421,6 +435,7 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     // check for a match within dr < 0.02
     if (mindr > 0.02) {
       fillHists(*hlt_trk,"hltonly");
+      hists_1d_["h_drmin_hltonly"]->Fill(mindr);
       if (verbose_) {
 	cout << " - unmatched hlt, mindr: " << mindr << ", track pt: " << hlt_trk->pt() << ", eta: " << hlt_trk->eta()
 	     << ", phi: " << hlt_trk->phi() << ", nhits: " << hlt_trk->numberOfValidHits() << endl;
@@ -465,8 +480,10 @@ void TrackCompAnalyzer::bookHists(edm::Service<TFileService>& fs, const std::str
   hists_1d_["h_nhits"+suf] = fs->make<TH1F>(Form("h_nhits%s",suf.c_str()) , "; N(hits)" , 30 , -0.5 , 30.5 );
   hists_1d_["h_chi2"+suf] = fs->make<TH1F>(Form("h_chi2%s",suf.c_str()) , "; #chi^{2}" , 500 , 0. , 500. );
   hists_1d_["h_normchi2"+suf] = fs->make<TH1F>(Form("h_normchi2%s",suf.c_str()) , "; Normalized #chi^{2}" , 300 , 0. , 30. );
-  hists_1d_["h_dxy"+suf] = fs->make<TH1F>(Form("h_dxy%s",suf.c_str()) , "; d_{xy} [cm]" , 500 , -5. , 5. );
+  hists_1d_["h_dxy"+suf] = fs->make<TH1F>(Form("h_dxy%s",suf.c_str()) , "; d_{xy} [cm]" , 100 , -0.5 , 0.5 );
   hists_1d_["h_dz"+suf] = fs->make<TH1F>(Form("h_dz%s",suf.c_str()) , "; d_{z} [cm]" , 500 , -10. , 10. );
+  hists_1d_["h_dxy_bs"+suf] = fs->make<TH1F>(Form("h_dxy_bs%s",suf.c_str()) , "; d_{xy} wrt BeamSpot [cm]" , 100 , -0.5 , 0.5 );
+  hists_1d_["h_algo"+suf] = fs->make<TH1F>(Form("h_algo%s",suf.c_str()) , "; Algo" , 15 , -0.5 , 14.5 );
 
 
   return;
@@ -503,6 +520,8 @@ void TrackCompAnalyzer::fillHists(const reco::Track& trk, const std::string& suf
   hists_1d_["h_normchi2"+suf]->Fill(trk.normalizedChi2());
   hists_1d_["h_dxy"+suf]->Fill(trk.dxy());
   hists_1d_["h_dz"+suf]->Fill(trk.dz());
+  hists_1d_["h_dxy_bs"+suf]->Fill(trk.dxy(*(beamSpotHandle_.product())));
+  hists_1d_["h_algo"+suf]->Fill(trk.algo());
 
   return;
 }
@@ -531,4 +550,12 @@ void TrackCompAnalyzer::fillHistsRecoHLT(const reco::Track& off_trk, const reco:
   return;
 }
 
+//____________________________________________________________________________
+// returns dphi in range [-pi,pi[
+float TrackCompAnalyzer::delta_phi(float phi1, float phi2) {
+  float dphi = phi1 - phi2;
+  if (dphi < -ROOT::Math::Pi()) dphi += 2*ROOT::Math::Pi();
+  else if (dphi >= ROOT::Math::Pi()) dphi -= 2*ROOT::Math::Pi();
 
+  return dphi;
+}

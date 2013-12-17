@@ -24,6 +24,7 @@
 
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
+#include "DataFormats/BeamSpot/interface/BeamSpot.h"
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
@@ -54,6 +55,8 @@ class TrackCompAnalyzer : public edm::EDAnalyzer {
   void fillHists(const reco::Track& trk, const std::string& suffix);
   void fillHistsRecoHLT(const reco::Track& off_trk, const reco::Track& hlt_trk, const std::string& suffix);
 
+  float delta_phi(float phi1, float phi2);
+
   /// module config parameters
   std::string   processName_;
   std::string   triggerName_;
@@ -62,6 +65,7 @@ class TrackCompAnalyzer : public edm::EDAnalyzer {
   edm::InputTag triggerEventWithRefsTag_;
   edm::InputTag hltTracksInputTag_;
   edm::InputTag offlineTracksInputTag_;
+  edm::InputTag beamSpotInputTag_;
   bool verbose_;
 
   /// additional class data memebers
@@ -73,6 +77,7 @@ class TrackCompAnalyzer : public edm::EDAnalyzer {
   // std::vector<std::string> hltShortNames_;
   edm::Handle<reco::TrackCollection> hltTracksHandle_;
   edm::Handle<reco::TrackCollection> offlineTracksHandle_;
+  edm::Handle<reco::BeamSpot> beamSpotHandle_;
 
   std::map<std::string,TH1F*> hists_1d_;
   std::map<std::string,TH2F*> hists_2d_;
