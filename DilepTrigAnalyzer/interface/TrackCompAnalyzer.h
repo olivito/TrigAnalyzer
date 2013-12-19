@@ -24,6 +24,12 @@
 
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
+#include "DataFormats/VertexReco/interface/Vertex.h"
+#include "DataFormats/VertexReco/interface/VertexFwd.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
+#include "DataFormats/MuonReco/interface/Muon.h"
+#include "DataFormats/MuonReco/interface/MuonFwd.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
@@ -56,6 +62,11 @@ class TrackCompAnalyzer : public edm::EDAnalyzer {
   void fillHistsRecoHLT(const reco::Track& off_trk, const reco::Track& hlt_trk, const std::string& suffix);
 
   float delta_phi(float phi1, float phi2);
+  int chargedHadronVertex(const reco::VertexCollection& vertices, 
+			const reco::PFCandidate& pfcand ) const;
+  int trackVertex(const reco::VertexCollection& vertices, 
+			const reco::TrackRef& trackRef ) const;
+
 
   /// module config parameters
   std::string   processName_;
@@ -65,6 +76,9 @@ class TrackCompAnalyzer : public edm::EDAnalyzer {
   edm::InputTag triggerEventWithRefsTag_;
   edm::InputTag hltTracksInputTag_;
   edm::InputTag offlineTracksInputTag_;
+  edm::InputTag offlinePFCandsInputTag_;
+  edm::InputTag offlineVerticesInputTag_;
+  edm::InputTag muonsInputTag_;
   edm::InputTag beamSpotInputTag_;
   bool verbose_;
 
@@ -77,6 +91,9 @@ class TrackCompAnalyzer : public edm::EDAnalyzer {
   // std::vector<std::string> hltShortNames_;
   edm::Handle<reco::TrackCollection> hltTracksHandle_;
   edm::Handle<reco::TrackCollection> offlineTracksHandle_;
+  edm::Handle<reco::PFCandidateCollection> offlinePFCandsHandle_;
+  edm::Handle<reco::VertexCollection> offlineVerticesHandle_;
+  edm::Handle<reco::MuonCollection> musHandle_;
   edm::Handle<reco::BeamSpot> beamSpotHandle_;
 
   std::map<std::string,TH1F*> hists_1d_;
