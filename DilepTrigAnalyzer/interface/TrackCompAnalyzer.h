@@ -30,6 +30,7 @@
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/MuonReco/interface/MuonFwd.h"
+#include "DataFormats/RecoCandidate/interface/RecoChargedCandidate.h"
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
@@ -58,8 +59,12 @@ class TrackCompAnalyzer : public edm::EDAnalyzer {
 
   void bookHists(edm::Service<TFileService>& fs, const std::string& suffix);
   void bookHistsRecoHLT(edm::Service<TFileService>& fs, const std::string& suffix);
+  void bookHistsPFHLT(edm::Service<TFileService>& fs, const std::string& suffix);
+  void bookHistsMuHLT(edm::Service<TFileService>& fs, const std::string& suffix);
   void fillHists(const reco::Track& trk, const std::string& suffix);
   void fillHistsRecoHLT(const reco::Track& off_trk, const reco::Track& hlt_trk, const std::string& suffix);
+  void fillHistsPFHLT(const reco::PFCandidate& off_pf, const reco::Track& hlt_trk, const std::string& suffix);
+  void fillHistsMuHLT(const reco::Track& hlt_mu, const reco::Track& hlt_trk, const std::string& suffix);
 
   float delta_phi(float phi1, float phi2);
   int chargedHadronVertex(const reco::VertexCollection& vertices, 

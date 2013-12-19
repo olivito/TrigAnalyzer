@@ -19,7 +19,6 @@
 // #include "DataFormats/MuonReco/interface/MuonPFIsolation.h"
 // #include "DataFormats/MuonReco/interface/MuonSelectors.h"
 #include "DataFormats/EgammaCandidates/interface/Electron.h"
-#include "DataFormats/RecoCandidate/interface/RecoChargedCandidate.h"
 #include "DataFormats/TrackReco/interface/TrackBase.h"
 
 // ROOT includes
@@ -79,9 +78,33 @@ TrackCompAnalyzer::TrackCompAnalyzer(const edm::ParameterSet& ps) :
   bookHists(fs,"offall_others");
   bookHists(fs,"offreg_others");
   bookHists(fs,"offonly_others");
-  bookHists(fs,"hlt");
+
+  bookHists(fs,"hltreg");
+  bookHistsMuHLT(fs,"hltreg");
+
+  bookHists(fs,"hltmatch");
+  bookHistsMuHLT(fs,"hltmatch");
+  bookHistsPFHLT(fs,"hltmatch");
+
+  bookHists(fs,"hltpfnonhad");
+  bookHistsMuHLT(fs,"hltpfnonhad");
+  bookHistsPFHLT(fs,"hltpfnonhad");
+
+  bookHists(fs,"hltpfnonvtx");
+  bookHistsMuHLT(fs,"hltpfnonvtx");
+  bookHistsPFHLT(fs,"hltpfnonvtx");
+
+  bookHists(fs,"hltnopf");
+  bookHistsMuHLT(fs,"hltnopf");
+  bookHistsRecoHLT(fs,"hltnopf");
+
   bookHists(fs,"hltonly");
+  bookHistsMuHLT(fs,"hltonly");
+
   hists_1d_["h_drmin_hltonly"] = fs->make<TH1F>(Form("h_drmin_hltonly") , "; min #DeltaR(off,HLT)" , 600 , 0. , 6. );
+  hists_1d_["h_offvtx_hltmatch"] = fs->make<TH1F>(Form("h_offvtx_hltmatch") , "; off vtx" , 32 , -2.5 , 29.5 );
+  hists_1d_["h_offvtx_hltpfnonhad"] = fs->make<TH1F>(Form("h_offvtx_hltpfnonhad") , "; off vtx" , 32 , -2.5 , 29.5 );
+  hists_1d_["h_offvtx_hltpfnonvtx"] = fs->make<TH1F>(Form("h_offvtx_hltpfnonvtx") , "; off vtx" , 32 , -2.5 , 29.5 );
   //  hists_1d_["h_dphi_offmu"] = fs->make<TH1F>(Form("h_dphi_offmu") , "; #Delta#phi(off,#mu)" , 600 , -2*ROOT::Math::Pi() , 2*ROOT::Math::Pi() );
   bookHistsRecoHLT(fs,"offhlt");
 
@@ -446,16 +469,26 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     // check dR from hlt muons: those tracks aren't used in track iso
     bool muon_overlap = false;
     bool muon_iso_region = false;
+    float mindr_mu = 99.;
+    int mindr_mu_idx = -1;
     for (unsigned int ihlt=0; ihlt < hlt_mus.size(); ++ihlt) {
       float dr = ROOT::Math::VectorUtil::DeltaR(hlt_trk->momentum(),hlt_mus.at(ihlt)->p4());
-      float dz = hlt_trk->vz() - hlt_mus.at(ihlt)->vz();
+      float dz = hlt_mus.at(ihlt)->vz() - hlt_trk->vz();
       if (dr < 0.01) {
 	muon_overlap = true;
 	break;
       }
       else if (dr < 0.3 && fabs(dz) < 0.2) {
 	muon_iso_region = true;
+	if (dr < mindr_mu) {
+	  mindr_mu = dr;
+	  mindr_mu_idx = ihlt;
+	}
       }
+    }
+    float mindr_mu_dz = 99.;
+    if (muon_iso_region && mindr_mu_idx >= 0) {
+      mindr_mu_dz = hlt_mus.at(mindr_mu_idx)->vz() - hlt_trk->vz();
     }
     if (muon_overlap) {
       if (verbose_) {
@@ -468,7 +501,9 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     }
     else if (!muon_iso_region) continue;
     else if (verbose_) {
-      cout << " - hlt track, track pt: " << hlt_trk->pt() << ", eta: " << hlt_trk->eta()
+      cout << " - hlt track. Closest muon: " << mindr_mu_idx 
+	   << ", dr: " << mindr_mu << ", dz: " << mindr_mu_dz << endl
+	   << "   pt: " << hlt_trk->pt() << ", eta: " << hlt_trk->eta()
 	   << ", phi: " << hlt_trk->phi() << ", vz: " << hlt_trk->vz()
 	   << ", nhits: " << hlt_trk->numberOfValidHits() 
 	   << ", algo: " <<hlt_trk->algo() << endl;
@@ -476,27 +511,12 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
     hltTracksCollectionNoMuons.push_back(*hlt_trk);
 
-    fillHists(*hlt_trk,"hlt");
-
-    float mindr = 99.;
-    for ( TrackCollection::const_iterator off_trk = offlineTracksCollection->begin(); off_trk != offlineEnd; ++off_trk ) {
-      float dr = ROOT::Math::VectorUtil::DeltaR(off_trk->momentum(),hlt_trk->momentum());
-      if (dr < mindr) mindr = dr;
-    } // off track loop
-
-    // check for a match within dr < 0.02
-    if (mindr > 0.02) {
-      fillHists(*hlt_trk,"hltonly");
-      hists_1d_["h_drmin_hltonly"]->Fill(mindr);
-      if (verbose_) {
-	cout << "   ! no match to offline!! mindr: " << mindr << endl;
-      }
-    }
+    fillHists(*hlt_trk,"hltreg");
+    TrackRef mu_trk = hlt_mus.at(mindr_mu_idx)->track();
+    fillHistsMuHLT(*mu_trk,*hlt_trk,"hltreg");
 
     float mindr_pf = 99.;
-    int mindr_pf_vtx = -2.;
-    float mindr_pf_vz = 99.;
-    int mindr_pf_id = 0;
+    PFCandidateCollection::const_iterator mindr_pfcand = pfcandEnd;
     for ( PFCandidateCollection::const_iterator off_pf = offlinePFCandsCollection->begin(); off_pf != pfcandEnd; ++off_pf ) {
       // require charged cand
       if (abs(off_pf->charge()) != 1) continue;
@@ -505,31 +525,79 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       float dr = ROOT::Math::VectorUtil::DeltaR(off_pf->p4(),hlt_trk->momentum());
       if (dr < mindr_pf) {
 	mindr_pf = dr;
-	// check vertex
-	int vtx = chargedHadronVertex(*offlineVerticesCollection,*off_pf);
-	mindr_pf_vtx = vtx;
-	mindr_pf_vz = off_pf->vertex().z();
-	mindr_pf_id = off_pf->pdgId();
+	mindr_pfcand = off_pf;
       }
     } // off pf cand loop
 
     // check for a match within dr < 0.02
-    if (mindr_pf > 0.02) {
-      // fillHists(*hlt_trk,"hltonly");
-      // hists_1d_["h_drmin_hltonly"]->Fill(mindr);
+    if (mindr_pf < 0.02) {
+      int vtx = -2;
+      if (!mindr_pfcand->trackRef().isNull()) vtx = chargedHadronVertex(*offlineVerticesCollection,*mindr_pfcand);
+
+      if ((mindr_pfcand->particleId() == 1) && (vtx == 0 || vtx == -1)) {
+	fillHists(*hlt_trk,"hltmatch");
+	fillHistsMuHLT(*mu_trk,*hlt_trk,"hltmatch");
+	fillHistsPFHLT(*mindr_pfcand,*hlt_trk,"hltmatch");
+	hists_1d_["h_offvtx_hltmatch"]->Fill(vtx);
+	if (verbose_) {
+	  cout << "   - match to pf cand: dr: " << mindr_pf << ", vtx: " << vtx 
+	       << ", vz: " << mindr_pfcand->vertex().z() << endl;
+	}
+      } else if (mindr_pfcand->particleId() != 1) {
+	fillHists(*hlt_trk,"hltpfnonhad");
+	fillHistsMuHLT(*mu_trk,*hlt_trk,"hltpfnonhad");
+	fillHistsPFHLT(*mindr_pfcand,*hlt_trk,"hltpfnonhad");
+	hists_1d_["h_offvtx_hltpfnonhad"]->Fill(vtx);
+	if (verbose_) {
+	  cout << "   @ match to non-had pf cand: dr: " << mindr_pf << ", vtx: " << vtx 
+	       << ", vz: " << mindr_pfcand->vertex().z() << ", id: " << mindr_pfcand->particleId() << endl;
+	}
+      } else if (vtx != 0 && vtx != -1) {
+	fillHists(*hlt_trk,"hltpfnonvtx");
+	fillHistsMuHLT(*mu_trk,*hlt_trk,"hltpfnonvtx");
+	fillHistsPFHLT(*mindr_pfcand,*hlt_trk,"hltpfnonvtx");
+	hists_1d_["h_offvtx_hltpfnonvtx"]->Fill(vtx);
+	if (verbose_) {
+	  cout << "   & match to unused pf cand: dr: " << mindr_pf << ", vtx: " << vtx 
+	       << ", vz: " << mindr_pfcand->vertex().z() << ", id: " << mindr_pfcand->particleId() << endl;
+	}
+      }
+    } // pf cand match
+
+    // only loop over offline tracks if we didn't find a charged pf cand
+    else if (mindr_pf >= 0.02) {
       if (verbose_) {
 	cout << "   ! no match to pf cands!! mindr: " << mindr_pf << endl;
       }
-    } else if (verbose_) {
 
-      if (abs(mindr_pf_id) == 211) {
-	cout << "   - match to pf cand: mindr: " << mindr_pf << ", vtx: " << mindr_pf_vtx 
-	     << ", vz: " << mindr_pf_vz << endl;
+      float mindr_off = 99.;
+      TrackCollection::const_iterator mindr_offtrk = offlineEnd;
+      for ( TrackCollection::const_iterator off_trk = offlineTracksCollection->begin(); off_trk != offlineEnd; ++off_trk ) {
+	float dr = ROOT::Math::VectorUtil::DeltaR(off_trk->momentum(),hlt_trk->momentum());
+	if (dr < mindr_off) {
+	  mindr_off = dr;
+	  mindr_offtrk = off_trk;
+	}
+      } // off track loop
+
+      // check for a match within dr < 0.02
+      if (mindr_off > 0.02) {
+	fillHists(*hlt_trk,"hltonly");
+	fillHistsMuHLT(*mu_trk,*hlt_trk,"hltonly");
+	hists_1d_["h_drmin_hltonly"]->Fill(mindr_off);
+	if (verbose_) {
+	  cout << "   ! no match to offline!! mindr: " << mindr_off << endl;
+	}
       } else {
-	cout << "   @ match to non-had pf cand: mindr: " << mindr_pf << ", vtx: " << mindr_pf_vtx 
-	     << ", vz: " << mindr_pf_vz << ", id: " << mindr_pf_id << endl;
+	fillHists(*hlt_trk,"hltnopf");
+	fillHistsMuHLT(*mu_trk,*hlt_trk,"hltnopf");
+	fillHistsRecoHLT(*mindr_offtrk,*hlt_trk,"hltnopf");
+	if (verbose_) {
+	  cout << "   - match to offline track: dr: " << mindr_off << endl;
+	}
       }
-    }
+    } // no match to pf
+
 
   } // loop over hlt tracks
 
@@ -594,7 +662,7 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
     // check for HLT track within dR < 0.02
     if (mindr < 0.02) {
-      fillHistsRecoHLT(*off_trk,*hlt_match,"offhlt");
+      //      fillHistsRecoHLT(*off_trk,*hlt_match,"offhlt");
       if (verbose_ && region) {
 	cout << "   - hlt match, dr = " << mindr << ", track pt: " << hlt_match->pt() << ", eta: " << hlt_match->eta()
 	     << ", phi: " << hlt_match->phi() << ", nhits: " << hlt_match->numberOfValidHits() 
@@ -624,7 +692,6 @@ void TrackCompAnalyzer::bookHists(edm::Service<TFileService>& fs, const std::str
   hists_1d_["h_nhits"+suf] = fs->make<TH1F>(Form("h_nhits%s",suf.c_str()) , "; N(hits)" , 31 , -0.5 , 30.5 );
   hists_1d_["h_chi2"+suf] = fs->make<TH1F>(Form("h_chi2%s",suf.c_str()) , "; #chi^{2}" , 500 , 0. , 500. );
   hists_1d_["h_normchi2"+suf] = fs->make<TH1F>(Form("h_normchi2%s",suf.c_str()) , "; Normalized #chi^{2}" , 300 , 0. , 30. );
-  hists_1d_["h_dxy"+suf] = fs->make<TH1F>(Form("h_dxy%s",suf.c_str()) , "; d_{xy} [cm]" , 100 , -0.5 , 0.5 );
   hists_1d_["h_dz"+suf] = fs->make<TH1F>(Form("h_dz%s",suf.c_str()) , "; d_{z} [cm]" , 500 , -10. , 10. );
   hists_1d_["h_dxy_bs"+suf] = fs->make<TH1F>(Form("h_dxy_bs%s",suf.c_str()) , "; d_{xy} wrt BeamSpot [cm]" , 100 , -0.5 , 0.5 );
   hists_1d_["h_algo"+suf] = fs->make<TH1F>(Form("h_algo%s",suf.c_str()) , "; Algo" , 15 , -0.5 , 14.5 );
@@ -641,9 +708,35 @@ void TrackCompAnalyzer::bookHistsRecoHLT(edm::Service<TFileService>& fs, const s
 
   hists_1d_["h_dr"+suf] = fs->make<TH1F>(Form("h_dr%s",suf.c_str()) , "; #DeltaR(off,HLT)" , 600 , 0. , 6. );
   hists_1d_["h_dpt"+suf] = fs->make<TH1F>(Form("h_dpt%s",suf.c_str()) , "; (p_{T}^{off} - p_{T}^{HLT}) / p_{T}^{off}" , 500 , -5. , 5. );
+  hists_1d_["h_dzoffhlt"+suf] = fs->make<TH1F>(Form("h_dzoffhlt%s",suf.c_str()) , "; #Deltaz(off,HLT) [cm]" , 500 , -10. , 10. );
   hists_1d_["h_dnhits"+suf] = fs->make<TH1F>(Form("h_dnhits%s",suf.c_str()) , "; N(hits,off) - N(hits,HLT)" , 41 , -10.5 , 30.5 );
   hists_1d_["h_algooff"+suf] = fs->make<TH1F>(Form("h_algooff%s",suf.c_str()) , "; Offline Algo" , 15 , -0.5 , 14.5 );
   hists_1d_["h_qualoff"+suf] = fs->make<TH1F>(Form("h_qualoff%s",suf.c_str()) , "; Offline Quality" , 3 , -0.5 , 2.5 );
+
+  return;
+}
+
+//____________________________________________________________________________
+void TrackCompAnalyzer::bookHistsPFHLT(edm::Service<TFileService>& fs, const std::string& suffix) {
+
+  std::string suf(suffix);
+  if (suffix.size()) suf = "_"+suffix;
+
+  hists_1d_["h_pfid"+suf] = fs->make<TH1F>(Form("h_pfid%s",suf.c_str()) , "; PF Particle Id" , 3 , 0.5 , 3.5 );
+
+  bookHistsRecoHLT(fs,suffix);
+
+  return;
+}
+
+//____________________________________________________________________________
+void TrackCompAnalyzer::bookHistsMuHLT(edm::Service<TFileService>& fs, const std::string& suffix) {
+
+  std::string suf(suffix);
+  if (suffix.size()) suf = "_"+suffix;
+
+  hists_1d_["h_drmuhlt"+suf] = fs->make<TH1F>(Form("h_drmuhlt%s",suf.c_str()) , "; #DeltaR(#mu,HLT)" , 600 , 0. , 6. );
+  hists_1d_["h_dzmuhlt"+suf] = fs->make<TH1F>(Form("h_dzmuhlt%s",suf.c_str()) , "; #Deltaz(#mu,HLT) [cm]" , 500 , -10. , 10. );
 
   return;
 }
@@ -664,7 +757,6 @@ void TrackCompAnalyzer::fillHists(const reco::Track& trk, const std::string& suf
   hists_1d_["h_nhits"+suf]->Fill(trk.numberOfValidHits());
   hists_1d_["h_chi2"+suf]->Fill(trk.chi2());
   hists_1d_["h_normchi2"+suf]->Fill(trk.normalizedChi2());
-  hists_1d_["h_dxy"+suf]->Fill(trk.dxy());
   hists_1d_["h_dz"+suf]->Fill(trk.dz());
   hists_1d_["h_dxy_bs"+suf]->Fill(trk.dxy(*(beamSpotHandle_.product())));
   hists_1d_["h_algo"+suf]->Fill(trk.algo());
@@ -678,12 +770,12 @@ void TrackCompAnalyzer::fillHistsRecoHLT(const reco::Track& off_trk, const reco:
   using namespace reco;
 
   if (off_trk.pt() <= 0.) {
-    std::cout << "TrackCompAnalyzer::fillHists: invalid off_trk pt: " << off_trk.pt() << std::endl;
+    std::cout << "TrackCompAnalyzer::fillHistsRecoHLT: invalid off_trk pt: " << off_trk.pt() << std::endl;
     return;
   }
 
   if (hlt_trk.pt() <= 0.) {
-    std::cout << "TrackCompAnalyzer::fillHists: invalid hlt_trk pt: " << hlt_trk.pt() << std::endl;
+    std::cout << "TrackCompAnalyzer::fillHistsRecoHLT: invalid hlt_trk pt: " << hlt_trk.pt() << std::endl;
     return;
   }
 
@@ -693,6 +785,7 @@ void TrackCompAnalyzer::fillHistsRecoHLT(const reco::Track& off_trk, const reco:
   float dr = ROOT::Math::VectorUtil::DeltaR(off_trk.momentum(),hlt_trk.momentum());
   hists_1d_["h_dpt"+suf]->Fill( (off_trk.pt() - hlt_trk.pt()) / off_trk.pt() );
   hists_1d_["h_dr"+suf]->Fill(dr);
+  hists_1d_["h_dzoffhlt"+suf]->Fill(off_trk.vz() - hlt_trk.vz());
   hists_1d_["h_dnhits"+suf]->Fill(off_trk.numberOfValidHits() - hlt_trk.numberOfValidHits());
   hists_1d_["h_algooff"+suf]->Fill(off_trk.algo());
 
@@ -700,6 +793,54 @@ void TrackCompAnalyzer::fillHistsRecoHLT(const reco::Track& off_trk, const reco:
   if (off_trk.quality(TrackBase::highPurity)) quality = int(TrackBase::highPurity);
   else if (off_trk.quality(TrackBase::tight)) quality = int(TrackBase::tight);
   hists_1d_["h_qualoff"+suf]->Fill(quality);
+
+  return;
+}
+
+//____________________________________________________________________________
+void TrackCompAnalyzer::fillHistsPFHLT(const reco::PFCandidate& off_pf, const reco::Track& hlt_trk, const std::string& suffix) {
+
+  using namespace reco;
+
+  if (off_pf.pt() <= 0.) {
+    std::cout << "TrackCompAnalyzer::fillHistsPFHLT: invalid off_pf pt: " << off_pf.pt() << std::endl;
+    return;
+  }
+
+  if (hlt_trk.pt() <= 0.) {
+    std::cout << "TrackCompAnalyzer::fillHistsPFHLT: invalid hlt_trk pt: " << hlt_trk.pt() << std::endl;
+    return;
+  }
+
+  std::string suf(suffix);
+  if (suffix.size()) suf = "_"+suffix;
+
+  hists_1d_["h_pfid"+suf]->Fill(off_pf.particleId());
+
+  if (!off_pf.trackRef().isNull())  fillHistsRecoHLT(*(off_pf.trackRef()),hlt_trk,suffix);
+
+  return;
+}
+
+//____________________________________________________________________________
+void TrackCompAnalyzer::fillHistsMuHLT(const reco::Track& hlt_mu, const reco::Track& hlt_trk, const std::string& suffix) {
+
+  if (hlt_mu.pt() <= 0.) {
+    std::cout << "TrackCompAnalyzer::fillHistsMuHLT: invalid hlt_mu pt: " << hlt_mu.pt() << std::endl;
+    return;
+  }
+
+  if (hlt_trk.pt() <= 0.) {
+    std::cout << "TrackCompAnalyzer::fillHistsMuHLT: invalid hlt_trk pt: " << hlt_trk.pt() << std::endl;
+    return;
+  }
+
+  std::string suf(suffix);
+  if (suffix.size()) suf = "_"+suffix;
+
+  float dr = ROOT::Math::VectorUtil::DeltaR(hlt_mu.momentum(),hlt_trk.momentum());
+  hists_1d_["h_drmuhlt"+suf]->Fill(dr);
+  hists_1d_["h_dzmuhlt"+suf]->Fill(hlt_mu.vz() - hlt_trk.vz());
 
   return;
 }
