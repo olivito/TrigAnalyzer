@@ -59,29 +59,29 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
        << "   IsoValMapTrkTag = " << isoValMapTrkTag_.encode() << endl
        << "   Verbose = " << verbose_ << endl;
 
-  hltTriggerNames_.push_back("HLT_Mu17_Mu8_v23");
   hltTriggerNames_.push_back("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_v1");
-  hltTriggerNames_.push_back("HLT_Mu17_TkMu8_v15");
+  hltTriggerNames_.push_back("HLT_Mu17_Mu8_v23");
   hltTriggerNames_.push_back("HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_v1");
-  hltTriggerNames_.push_back("HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v10");
+  hltTriggerNames_.push_back("HLT_Mu17_TkMu8_v15");
   hltTriggerNames_.push_back("HLT_Mu8_TrkIsoVVL_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v1");
-  hltTriggerNames_.push_back("HLT_Mu17_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v10");
+  hltTriggerNames_.push_back("HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v10");
   hltTriggerNames_.push_back("HLT_Mu17_TrkIsoVVL_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v1");
+  hltTriggerNames_.push_back("HLT_Mu17_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v10");
 
-  hltShortNames_.push_back("mm");
   hltShortNames_.push_back("mmi");
-  hltShortNames_.push_back("mmtk");
+  hltShortNames_.push_back("mm");
   hltShortNames_.push_back("mmitk");
-  hltShortNames_.push_back("em");
+  hltShortNames_.push_back("mmtk");
   hltShortNames_.push_back("emi");
-  hltShortNames_.push_back("me");
+  hltShortNames_.push_back("em");
   hltShortNames_.push_back("mei");
+  hltShortNames_.push_back("me");
 
   // histogram setup
   edm::Service<TFileService> fs;
   if (triggerName_ == "dimu") {
     h_results_mm_ = fs->make<TH1F>("h_results_mm" , ";Trigger Results" , 16 , -0.5 , 15.5 );
-    for (unsigned int itrig=0; itrig<=(unsigned int)mmitk; ++itrig) {
+    for (unsigned int itrig=0; itrig<=(unsigned int)mmtk; ++itrig) {
       bookHists(fs,hltShortNames_.at(itrig),true);
       bookHists(fs,hltShortNames_.at(itrig)+"_tight");
       bookHists(fs,hltShortNames_.at(itrig)+"_trigiso");
@@ -89,7 +89,7 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
     }
   } else if (triggerName_ == "emu") {
     h_results_em_ = fs->make<TH1F>("h_results_em" , ";Trigger Results" , 16 , -0.5 , 15.5 );
-    for (unsigned int itrig=(unsigned int)em; itrig<=(unsigned int)mei; ++itrig) {
+    for (unsigned int itrig=(unsigned int)emi; itrig<=(unsigned int)me; ++itrig) {
       bookHists(fs,hltShortNames_.at(itrig),true);
       bookHists(fs,hltShortNames_.at(itrig)+"_tight");
       bookHists(fs,hltShortNames_.at(itrig)+"_trigiso");
@@ -120,7 +120,7 @@ DilepTrigAnalyzerRECO::beginRun(edm::Run const & iRun, edm::EventSetup const& iS
       const unsigned int n(hltConfig_.size());
       // check if trigger names in (new) config
       if (triggerName_=="dimu") {
-	for (unsigned int itrig = 0; itrig <= (unsigned int)mmitk; ++itrig) {
+	for (unsigned int itrig = 0; itrig <= (unsigned int)mmtk; ++itrig) {
 	  unsigned int triggerIndex(hltConfig_.triggerIndex(hltTriggerNames_.at(itrig)));
 	  if (triggerIndex>=n) {
 	    cout << "DilepTrigAnalyzerRECO::analyze:"
@@ -130,7 +130,7 @@ DilepTrigAnalyzerRECO::beginRun(edm::Run const & iRun, edm::EventSetup const& iS
 	} // loop over dimu triggers
       } // if dimu triggers 
       else if (triggerName_=="emu") {
-	for (unsigned int itrig = (unsigned int)em; itrig <= (unsigned int)mei; ++itrig) {
+	for (unsigned int itrig = (unsigned int)emi; itrig <= (unsigned int)me; ++itrig) {
 	  unsigned int triggerIndex(hltConfig_.triggerIndex(hltTriggerNames_.at(itrig)));
 	  if (triggerIndex>=n) {
 	    cout << "DilepTrigAnalyzerRECO::analyze:"
@@ -189,19 +189,19 @@ DilepTrigAnalyzerRECO::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   
   // analyze this event for the triggers requested
   if (triggerName_=="dimu") {
-    unsigned int results(0);
-    for (unsigned int itrig=0; itrig <= (unsigned int)mmitk; ++itrig) {
+    trigpass_results_ = 0;
+    for (unsigned int itrig=0; itrig <= (unsigned int)mmtk; ++itrig) {
       bool pass = analyzeTrigger(iEvent,iSetup,(hltTrigs)itrig);
-      if (pass) results |= 1 << itrig;
+      if (pass) trigpass_results_ |= 1 << itrig;
     }
-    h_results_mm_->Fill(results);
+    h_results_mm_->Fill(trigpass_results_);
   } else if (triggerName_=="emu") {
-    unsigned int results(0);
-    for (unsigned int itrig=(unsigned int)em; itrig <= (unsigned int)mei ; ++itrig) {
+    trigpass_results_ = 0;
+    for (unsigned int itrig=(unsigned int)emi; itrig <= (unsigned int)me ; ++itrig) {
       bool pass = analyzeTrigger(iEvent,iSetup,(hltTrigs)itrig);
-      if (pass) results |= 1 << (itrig - (unsigned int)em);
+      if (pass) trigpass_results_ |= 1 << (itrig - (unsigned int)emi);
     }
-    h_results_em_->Fill(results);
+    h_results_em_->Fill(trigpass_results_);
   } else {
 	cout << "DilepTrigAnalyzerRECO::analyze: TriggerName " << triggerName_ 
 	     << " not recognized!!" << endl;
@@ -241,11 +241,11 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
   bool ismm = false;
   bool isem = false;
   bool isme = false;
-  if ( triggerEnum <= mmitk ) {
+  if ( triggerEnum <= mmtk ) {
     ismm = true;
-  } else if ( triggerEnum <= emi ) {
+  } else if ( triggerEnum <= em ) {
     isem = true;
-  } else if (triggerEnum <= mei) {
+  } else if (triggerEnum <= me) {
     isme = true;
   }
 
@@ -253,6 +253,12 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     cout << "DilepTrigAnalyzerRECO::analyzeTrigger: triggerEnum: " << triggerEnum
 	 << " not recognized, aborting.." << endl;
     return false;
+  }
+
+  // if non-iso trigger, get iso trigger result to compare to
+  hltTrigs isoTriggerEnum = notrig;
+  if ( triggerEnum == mm || triggerEnum == mmtk || triggerEnum == em || triggerEnum == me ) {
+    isoTriggerEnum = hltTrigs(int(triggerEnum)-1);
   }
   
   if (verbose_) {
@@ -391,32 +397,32 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	   (moduleLabel.find("hltL1Mu12EG7L3MuFiltered17") != string::npos) ||
 	   (moduleLabel.find("hltL1sL1Mu3p5EG12ORL1MuOpenEG12L3Filtered8") != string::npos) || 
 	   (moduleLabel.find("hltDiMuonGlb17Trk8DzFiltered0p2") != string::npos) ) {
-	if (verbose_) cout << "found the module before/cutting on iso! hurray!" << endl;
+	//	if (verbose_) cout << "found the module before/cutting on iso! hurray!" << endl;
 	iEvent.getByLabel(isoValMapGblTag_,isoValMapGblHandle);
 	if (!isoValMapGblHandle.isValid()) {
 	  cout << "DilepTrigAnalyzerRECO::analyzeTrigger: Error in getting isoValMapGbl product from Event!" << endl;
 	  return true;
 	}
-	else if (isoValMapGblHandle->idSize() != nMuons) {
-	  cout << "DilepTrigAnalyzerRECO::analyzeTrigger: WARNING: isoValMapGbl size == " << isoValMapGblHandle->idSize()
-	       << ", nMuons == " << nMuons << ". Contents: " << endl;
-	  for (unsigned int j=0; j < isoValMapGblHandle->ids().size(); ++j) {
-	    cout << "   " << isoValMapGblHandle->ids().at(j).first << endl;
-	  }
-	}
+	// else if (isoValMapGblHandle->idSize() != nMuons) {
+	//   cout << "DilepTrigAnalyzerRECO::analyzeTrigger: WARNING: isoValMapGbl size == " << isoValMapGblHandle->idSize()
+	//        << ", nMuons == " << nMuons << ". Contents: " << endl;
+	//   for (unsigned int j=0; j < isoValMapGblHandle->ids().size(); ++j) {
+	//     cout << "   " << isoValMapGblHandle->ids().at(j).first << endl;
+	//   }
+	// }
 
 	iEvent.getByLabel(isoValMapTrkTag_,isoValMapTrkHandle);
 	if (!isoValMapTrkHandle.isValid()) {
 	  cout << "DilepTrigAnalyzerRECO::analyzeTrigger: Error in getting isoValMapTrk product from Event!" << endl;
 	  return true;
 	}
-	else if (isoValMapTrkHandle->idSize() != nMuons) {
-	  cout << "DilepTrigAnalyzerRECO::analyzeTrigger: WARNING: isoValMapTrk size == " << isoValMapTrkHandle->idSize()
-	       << ", nMuons == " << nMuons << ". Contents: " << endl;
-	  for (unsigned int j=0; j < isoValMapTrkHandle->ids().size(); ++j) {
-	    cout << "   " << isoValMapTrkHandle->ids().at(j).first << endl;
-	  }
-	}
+	// else if (isoValMapTrkHandle->idSize() != nMuons) {
+	//   cout << "DilepTrigAnalyzerRECO::analyzeTrigger: WARNING: isoValMapTrk size == " << isoValMapTrkHandle->idSize()
+	//        << ", nMuons == " << nMuons << ". Contents: " << endl;
+	//   for (unsigned int j=0; j < isoValMapTrkHandle->ids().size(); ++j) {
+	//     cout << "   " << isoValMapTrkHandle->ids().at(j).first << endl;
+	//   }
+	// }
 
 	isovals = true;
       } // filter before/after iso
@@ -700,6 +706,10 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     else if ( (hlt_mu_subl_idx >= 0) && (ROOT::Math::VectorUtil::DeltaR(lv,hlt_mu_subl.lv) < dr_trigmatch) ) match = true;
     if (!match) continue;
 
+    // basic dz cut to remove muons from large z
+    bool pass_dz = bool(fabs(muon->muonBestTrack()->dz(firstGoodVertex->position())) < 0.5);
+    if (!pass_dz) continue;
+
     // check tight muon ID, to break ambiguity
     bool pass_tight_1 = muon::isTightMuon(*muon,*firstGoodVertex);
 
@@ -789,7 +799,8 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
       }
     }
 
-    if (pass_tight && pass_trkiso_trig) {
+    //    if (pass_tight && pass_trkiso_trig) {
+    if (pass_trkiso_trig) {
       // pt ordering
       if ( (off_mu_trigiso_lead_idx == -1) || (lv.pt() > off_mu_trigiso_lead.lv.pt()) ) {
 	off_mu_trigiso_subl_idx = off_mu_trigiso_lead_idx;
@@ -884,6 +895,20 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     }
   } // isme
 
+
+  // printout for cases where trigger is inefficient
+  if ( verbose_ && ismm && (off_mu_trigiso_lead_idx >= 0) && (off_mu_trigiso_subl_idx >= 0) ) {
+    // check that this is the noniso trigger, and that the iso trigger failed
+    if ( (isoTriggerEnum != notrig) && ((trigpass_results_ & (1 << isoTriggerEnum)) == 0) ) {
+      cout << "-- HLT inefficiency! Non-iso trigger: " << triggerName << ", run: " << iEvent.id().run()
+	   << ", event: " << iEvent.id().event() << endl
+	   << "     hlt mu1 pt: " << hlt_mu_lead.lv.pt() << ", iso: " << hlt_mu_lead.trkiso
+	   << ", hlt mu2 pt: " << hlt_mu_subl.lv.pt() << ", iso: " << hlt_mu_subl.trkiso << endl
+	   << "     off mu1 pt: " << off_mu_trigiso_lead.lv.pt() << ", iso: " << off_mu_trigiso_lead.trkiso
+	   << ", off mu2 pt: " << off_mu_trigiso_subl.lv.pt() << ", iso: " << off_mu_trigiso_subl.trkiso << endl;
+    }
+  }
+
   return true;
 }
 
@@ -955,8 +980,6 @@ void DilepTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLepton
   std::string hlt_suf("");
   if (isHLT) hlt_suf = "_hlt";
 
-  LorentzVector dilep = lead.lv+subl.lv;
-
   if (lead.lv.pt() > 0) {
     hists_1d_["h_lead_pt"+suf+hlt_suf]->Fill(lead.lv.pt());
     hists_1d_["h_lead_eta"+suf+hlt_suf]->Fill(lead.lv.eta());
@@ -973,6 +996,7 @@ void DilepTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLepton
   if (subl.lv.pt() > 0) {
     hists_1d_["h_subl_pt"+suf+hlt_suf]->Fill(subl.lv.pt());
     hists_1d_["h_subl_eta"+suf+hlt_suf]->Fill(subl.lv.eta());
+    LorentzVector dilep = lead.lv+subl.lv;
     hists_1d_["h_mll"+suf+hlt_suf]->Fill(dilep.M());
     hists_1d_["h_dr"+suf+hlt_suf]->Fill(ROOT::Math::VectorUtil::DeltaR(lead.lv,subl.lv));
     if (subl.type == 13) {

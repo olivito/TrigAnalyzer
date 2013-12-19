@@ -52,7 +52,7 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   explicit DilepTrigAnalyzerRECO(const edm::ParameterSet&);
   ~DilepTrigAnalyzerRECO();
 
-  enum hltTrigs {mm, mmi, mmtk, mmitk, em, emi, me, mei};
+  enum hltTrigs {mmi, mm, mmitk, mmtk, emi, em, mei, me, notrig};
 
   virtual void beginRun(edm::Run const &, edm::EventSetup const&);
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
@@ -97,6 +97,8 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
 
   std::map<std::string,TH1F*> hists_1d_;
   std::map<std::string,TH2F*> hists_2d_;
+
+  unsigned int trigpass_results_;
 
   /// payload extracted from TriggerEventWithRefs
 
