@@ -90,6 +90,7 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   std::vector<std::string> hltTriggerNames_;
   std::vector<std::string> hltShortNames_;
   TH1F* h_results_mm_;
+  TH1F* h_results_offdilep_mm_;
   TH1F* h_results_em_;
   edm::Handle<reco::VertexCollection> vertexHandle_;
   edm::Handle<reco::GsfElectronCollection> elsHandle_;
@@ -99,6 +100,7 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   std::map<std::string,TH2F*> hists_2d_;
 
   unsigned int trigpass_results_;
+  unsigned int trigpass_results_offdilep_;
 
   /// payload extracted from TriggerEventWithRefs
 
