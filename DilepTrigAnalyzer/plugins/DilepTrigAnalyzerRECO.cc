@@ -39,6 +39,7 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
   electronsInputTag_(ps.getParameter<edm::InputTag>("electronsInputTag")),
   muonsInputTag_(ps.getParameter<edm::InputTag>("muonsInputTag")),
   vtxInputTag_(ps.getParameter<edm::InputTag>("vtxInputTag")),
+  getHLTIsoVals_(ps.getParameter<bool>("getHLTIsoVals")),
   isoValMapGblTag_(ps.getParameter<edm::InputTag>("isoValMapGbl")),
   isoValMapTrkTag_(ps.getParameter<edm::InputTag>("isoValMapTrk")),
   verbose_(ps.getParameter<bool>("verbose"))
@@ -55,6 +56,7 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
        << "   ElectronsInputTag = " << electronsInputTag_.encode() << endl
        << "   MuonsInputTag = " << muonsInputTag_.encode() << endl
        << "   VtxInputTag = " << vtxInputTag_.encode() << endl
+       << "   GetHLTIsoVals = " << getHLTIsoVals_ << endl
        << "   IsoValMapGblTag = " << isoValMapGblTag_.encode() << endl
        << "   IsoValMapTrkTag = " << isoValMapTrkTag_.encode() << endl
        << "   Verbose = " << verbose_ << endl;
@@ -405,10 +407,11 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
       Handle<edm::ValueMap<float> > isoValMapTrkHandle;
 
       // mm / em / me / mmtk cases
-      if ( (moduleLabel.find("hltDiMuonGlb17Glb8DzFiltered0p2") != string::npos) ||
-	   (moduleLabel.find("hltL1Mu12EG7L3MuFiltered17") != string::npos) ||
-	   (moduleLabel.find("hltL1sL1Mu3p5EG12ORL1MuOpenEG12L3Filtered8") != string::npos) || 
-	   (moduleLabel.find("hltDiMuonGlb17Trk8DzFiltered0p2") != string::npos) ) {
+      if ( getHLTIsoVals_ && 
+	   ( (moduleLabel.find("hltDiMuonGlb17Glb8DzFiltered0p2") != string::npos) ||
+	     (moduleLabel.find("hltL1Mu12EG7L3MuFiltered17") != string::npos) ||
+	     (moduleLabel.find("hltL1sL1Mu3p5EG12ORL1MuOpenEG12L3Filtered8") != string::npos) || 
+	     (moduleLabel.find("hltDiMuonGlb17Trk8DzFiltered0p2") != string::npos) ) ) {
 	//	if (verbose_) cout << "found the module before/cutting on iso! hurray!" << endl;
 	iEvent.getByLabel(isoValMapGblTag_,isoValMapGblHandle);
 	bool success = true;

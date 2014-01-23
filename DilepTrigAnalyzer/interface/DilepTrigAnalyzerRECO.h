@@ -78,6 +78,7 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   edm::InputTag electronsInputTag_;
   edm::InputTag muonsInputTag_;
   edm::InputTag vtxInputTag_;
+  bool getHLTIsoVals_;
   edm::InputTag isoValMapGblTag_;
   edm::InputTag isoValMapTrkTag_;
   bool verbose_;
