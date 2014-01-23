@@ -573,6 +573,8 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       float mindr_off = 99.;
       TrackCollection::const_iterator mindr_offtrk = offlineEnd;
       for ( TrackCollection::const_iterator off_trk = offlineTracksCollection->begin(); off_trk != offlineEnd; ++off_trk ) {
+	// require high purity
+	if (!off_trk->quality(TrackBase::highPurity)) continue;
 	float dr = ROOT::Math::VectorUtil::DeltaR(off_trk->momentum(),hlt_trk->momentum());
 	if (dr < mindr_off) {
 	  mindr_off = dr;
@@ -606,16 +608,20 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
   const TrackCollection::const_iterator hltNoMuonsEnd = hltTracksCollectionNoMuons.end();
 
   // -------------------------------------------------------------------
-  // --------- loop on offline tracks ----------------------------------
+  // --------- loop on offline pf cands --------------------------------
   // -------------------------------------------------------------------
 
-  // loop on offline tracks, select those within the online tracking regions
+  // loop on offline charged pf cands, select those within the online tracking regions
   //  make plots for offline tracks, check for online matches
-  //  TrackCollection offlineTracksCollectionReg;
-  for ( TrackCollection::const_iterator off_trk = offlineTracksCollection->begin(); off_trk != offlineEnd; ++off_trk ) {
-    // check for iter0 (algo 4) and high purity
-    //    if (off_trk->algo() != 4) continue;
-    if (!off_trk->quality(TrackBase::highPurity)) continue;
+  //  for ( TrackCollection::const_iterator off_trk = offlineTracksCollection->begin(); off_trk != offlineEnd; ++off_trk ) {
+  for ( PFCandidateCollection::const_iterator off_pf = offlinePFCandsCollection->begin(); off_pf != pfcandEnd; ++off_pf ) {
+    // require charged cands, hadrons
+    if (abs(off_pf->charge()) != 1) continue;
+    if (off_pf->particleId() != 1) continue;
+
+    // check for valid track ref
+    TrackRef off_trk = off_pf->trackRef();
+    if (off_trk.isNull()) continue;
 
     if (off_trk->algo() == 4) fillHists(*off_trk,"offall_iter0");
     else fillHists(*off_trk,"offall_others");
@@ -674,7 +680,7 @@ TrackCompAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
       else fillHists(*off_trk,"offonly_others");
     }
 
-  } // off track loop
+  } // off pf cand loop
 
   if (verbose_) cout << endl;
 
