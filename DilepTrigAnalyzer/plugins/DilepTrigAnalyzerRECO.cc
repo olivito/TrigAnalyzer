@@ -13,7 +13,6 @@
 #include "FWCore/Common/interface/TriggerResultsByName.h"
 #include "TrigAnalyzer/DilepTrigAnalyzer/interface/DilepTrigAnalyzerRECO.h"
 
-#include "DataFormats/Common/interface/ValueMap.h"
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/MuonReco/interface/MuonPFIsolation.h"
@@ -33,15 +32,24 @@
 DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) : 
   processName_(ps.getParameter<std::string>("processName")),
   triggerName_(ps.getParameter<std::string>("triggerName")),
+  mmIsoTriggerName_(ps.getParameter<std::string>("mmIsoTriggerName")),
+  mmtkIsoTriggerName_(ps.getParameter<std::string>("mmtkIsoTriggerName")),
   triggerResultsTag_(ps.getParameter<edm::InputTag>("triggerResults")),
   triggerEventTag_(ps.getParameter<edm::InputTag>("triggerEvent")),
   triggerEventWithRefsTag_(ps.getParameter<edm::InputTag>("triggerEventWithRefs")),
   electronsInputTag_(ps.getParameter<edm::InputTag>("electronsInputTag")),
   muonsInputTag_(ps.getParameter<edm::InputTag>("muonsInputTag")),
   vtxInputTag_(ps.getParameter<edm::InputTag>("vtxInputTag")),
+  hltVtxInputTag_(ps.getParameter<edm::InputTag>("hltVtxInputTag")),
   getHLTIsoVals_(ps.getParameter<bool>("getHLTIsoVals")),
-  isoValMapGblTag_(ps.getParameter<edm::InputTag>("isoValMapGbl")),
+  isoValMapGlbTag_(ps.getParameter<edm::InputTag>("isoValMapGlb")),
   isoValMapTrkTag_(ps.getParameter<edm::InputTag>("isoValMapTrk")),
+  dumpHLTPFCands_(ps.getParameter<bool>("dumpHLTPFCands")),
+  hltPFCandsGlbTag_(ps.getParameter<edm::InputTag>("hltPFCandsGlb")),
+  hltPFCandsTrkTag_(ps.getParameter<edm::InputTag>("hltPFCandsTrk")),
+  offPFCandsTag_(ps.getParameter<edm::InputTag>("offPFCands")),
+  offLeadPt_(ps.getParameter<double>("offLeadPt")),
+  offSublPt_(ps.getParameter<double>("offSublPt")),
   verbose_(ps.getParameter<bool>("verbose"))
 {
   using namespace std;
@@ -50,24 +58,37 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
   cout << "DilepTrigAnalyzerRECO configuration: " << endl
        << "   ProcessName = " << processName_ << endl
        << "   TriggerName = " << triggerName_ << endl
+       << "   mmIsoTriggerName = " << mmIsoTriggerName_ << endl
+       << "   mmtkIsoTriggerName = " << mmtkIsoTriggerName_ << endl
        << "   TriggerResultsTag = " << triggerResultsTag_.encode() << endl
        << "   TriggerEventTag = " << triggerEventTag_.encode() << endl
        << "   TriggerEventWithRefsTag = " << triggerEventWithRefsTag_.encode() << endl
        << "   ElectronsInputTag = " << electronsInputTag_.encode() << endl
        << "   MuonsInputTag = " << muonsInputTag_.encode() << endl
+       << "   HLTVtxInputTag = " << hltVtxInputTag_.encode() << endl
        << "   VtxInputTag = " << vtxInputTag_.encode() << endl
        << "   GetHLTIsoVals = " << getHLTIsoVals_ << endl
-       << "   IsoValMapGblTag = " << isoValMapGblTag_.encode() << endl
+       << "   IsoValMapGlbTag = " << isoValMapGlbTag_.encode() << endl
        << "   IsoValMapTrkTag = " << isoValMapTrkTag_.encode() << endl
+       << "   DumpHLTPFCands = " << dumpHLTPFCands_ << endl
+       << "   HLTPFCandsGlbTag = " << hltPFCandsGlbTag_.encode() << endl
+       << "   HLTPFCandsTrkTag = " << hltPFCandsTrkTag_.encode() << endl
+       << "   OffPFCandsTrkTag = " << offPFCandsTag_.encode() << endl
+       << "   OffLeadPt = " << offLeadPt_ << endl
+       << "   OffSublPt = " << offSublPt_ << endl
        << "   Verbose = " << verbose_ << endl;
 
   //  hltTriggerNames_.push_back("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_v1");
   //  hltTriggerNames_.push_back("HLT_Mu17_IterTrkIsoVVL_Mu8_IterTrkIsoVVL_v1");
-  hltTriggerNames_.push_back("HLT_Mu17_ChPFIsoVVL_Mu8_ChPFIsoVVL_v1");
+  //  hltTriggerNames_.push_back("HLT_Mu17_ChPFIsoVVL_Mu8_ChPFIsoVVL_v1");
+  //  hltTriggerNames_.push_back("HLT_Mu17_NoMuChPFIsoVVL_Mu8_NoMuChPFIsoVVL_v1");
+  hltTriggerNames_.push_back(mmIsoTriggerName_);
   hltTriggerNames_.push_back("HLT_Mu17_Mu8_v23");
   //  hltTriggerNames_.push_back("HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_v1");
   //  hltTriggerNames_.push_back("HLT_Mu17_IterTrkIsoVVL_TkMu8_IterTrkIsoVVL_v1");
-  hltTriggerNames_.push_back("HLT_Mu17_ChPFIsoVVL_TkMu8_ChPFIsoVVL_v1");
+  //  hltTriggerNames_.push_back("HLT_Mu17_ChPFIsoVVL_TkMu8_ChPFIsoVVL_v1");
+  //  hltTriggerNames_.push_back("HLT_Mu17_NoMuChPFIsoVVL_TkMu8_NoMuChPFIsoVVL_v1");
+  hltTriggerNames_.push_back(mmtkIsoTriggerName_);
   hltTriggerNames_.push_back("HLT_Mu17_TkMu8_v15");
   hltTriggerNames_.push_back("HLT_Mu8_TrkIsoVVL_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v1");
   hltTriggerNames_.push_back("HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v10");
@@ -188,11 +209,31 @@ DilepTrigAnalyzerRECO::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   // sanity check
   assert(triggerResultsHandle_->size()==hltConfig_.size());
 
+  // get trigger iso val collections, if requested
+  if ( getHLTIsoVals_ ) {
+    iEvent.getByLabel(isoValMapGlbTag_,isoValMapGlbHandle_);
+    if (!isoValMapGlbHandle_.isValid()) {
+      cout << "DilepTrigAnalyzerRECO::analyzeTrigger: Error in getting isoValMapGlb product from Event!" << endl;
+    }
+
+    iEvent.getByLabel(isoValMapTrkTag_,isoValMapTrkHandle_);
+    if (!isoValMapTrkHandle_.isValid()) {
+      cout << "DilepTrigAnalyzerRECO::analyzeTrigger: Error in getting isoValMapTrk product from Event!" << endl;
+    }
+  } 
+
   // retrieve necessary containers
   iEvent.getByLabel(vtxInputTag_, vertexHandle_);
   iEvent.getByLabel(electronsInputTag_, elsHandle_);
   iEvent.getByLabel( muonsInputTag_ , musHandle_ );
 
+  // for printing out HLT PF Cand info
+  if (dumpHLTPFCands_) {
+    iEvent.getByLabel(hltPFCandsGlbTag_, hltPFCandsGlbHandle_);
+    iEvent.getByLabel(hltPFCandsTrkTag_, hltPFCandsTrkHandle_);
+    iEvent.getByLabel(offPFCandsTag_, offPFCandsHandle_);
+    iEvent.getByLabel(hltVtxInputTag_, hltVertexHandle_);
+  }
   
   // analyze this event for the triggers requested
   if (triggerName_=="dimu") {
@@ -403,8 +444,6 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     if (nMuons>0) {
 
       bool isovals = false;
-      Handle<edm::ValueMap<float> > isoValMapGblHandle;
-      Handle<edm::ValueMap<float> > isoValMapTrkHandle;
 
       // mm / em / me / mmtk cases
       if ( getHLTIsoVals_ && 
@@ -413,30 +452,30 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	     (moduleLabel.find("hltL1sL1Mu3p5EG12ORL1MuOpenEG12L3Filtered8") != string::npos) || 
 	     (moduleLabel.find("hltDiMuonGlb17Trk8DzFiltered0p2") != string::npos) ) ) {
 	//	if (verbose_) cout << "found the module before/cutting on iso! hurray!" << endl;
-	iEvent.getByLabel(isoValMapGblTag_,isoValMapGblHandle);
+	//	iEvent.getByLabel(isoValMapGlbTag_,isoValMapGlbHandle_);
 	bool success = true;
-	if (!isoValMapGblHandle.isValid()) {
-	  cout << "DilepTrigAnalyzerRECO::analyzeTrigger: Error in getting isoValMapGbl product from Event!" << endl;
+	if (!isoValMapGlbHandle_.isValid() && (triggerEnum == mm || triggerEnum == mmi)) {
+	  cout << "DilepTrigAnalyzerRECO::analyzeTrigger: Error in getting isoValMapGlb product from Event!" << endl;
 	  success = false;
 	}
-	// else if (isoValMapGblHandle->idSize() != nMuons) {
-	//   cout << "DilepTrigAnalyzerRECO::analyzeTrigger: WARNING: isoValMapGbl size == " << isoValMapGblHandle->idSize()
+	// else if (isoValMapGlbHandle_->idSize() != nMuons) {
+	//   cout << "DilepTrigAnalyzerRECO::analyzeTrigger: WARNING: isoValMapGlb size == " << isoValMapGlbHandle_->idSize()
 	//        << ", nMuons == " << nMuons << ". Contents: " << endl;
-	//   for (unsigned int j=0; j < isoValMapGblHandle->ids().size(); ++j) {
-	//     cout << "   " << isoValMapGblHandle->ids().at(j).first << endl;
+	//   for (unsigned int j=0; j < isoValMapGlbHandle_->ids().size(); ++j) {
+	//     cout << "   " << isoValMapGlbHandle_->ids().at(j).first << endl;
 	//   }
 	// }
 
-	iEvent.getByLabel(isoValMapTrkTag_,isoValMapTrkHandle);
-	if (!isoValMapTrkHandle.isValid()) {
+	//	iEvent.getByLabel(isoValMapTrkTag_,isoValMapTrkHandle_);
+	if (!isoValMapTrkHandle_.isValid() && (triggerEnum == mmtk || triggerEnum == mmitk)) {
 	  cout << "DilepTrigAnalyzerRECO::analyzeTrigger: Error in getting isoValMapTrk product from Event!" << endl;
 	  success = false;
 	}
-	// else if (isoValMapTrkHandle->idSize() != nMuons) {
-	//   cout << "DilepTrigAnalyzerRECO::analyzeTrigger: WARNING: isoValMapTrk size == " << isoValMapTrkHandle->idSize()
+	// else if (isoValMapTrkHandle_->idSize() != nMuons) {
+	//   cout << "DilepTrigAnalyzerRECO::analyzeTrigger: WARNING: isoValMapTrk size == " << isoValMapTrkHandle_->idSize()
 	//        << ", nMuons == " << nMuons << ". Contents: " << endl;
-	//   for (unsigned int j=0; j < isoValMapTrkHandle->ids().size(); ++j) {
-	//     cout << "   " << isoValMapTrkHandle->ids().at(j).first << endl;
+	//   for (unsigned int j=0; j < isoValMapTrkHandle_->ids().size(); ++j) {
+	//     cout << "   " << isoValMapTrkHandle_->ids().at(j).first << endl;
 	//   }
 	// }
 
@@ -456,25 +495,25 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	    // check first that id is in map
 	    //   if not in map, try other map
 	    //   if not in either map, raise hell
-	    if ( isoValMapGblHandle->contains(muonRefs_.at(i).id()) ) {
-	      const edm::ValueMap<float> ::value_type & muonDeposit = (*(isoValMapGblHandle))[muonRefs_[i]];
+	    if ( (triggerEnum == mm || triggerEnum == mmi) && isoValMapGlbHandle_->contains(muonRefs_.at(i).id()) ) {
+	      const edm::ValueMap<float> ::value_type & muonDeposit = (*(isoValMapGlbHandle_))[muonRefs_[i]];
 	      iso = muonDeposit;
 	    }
-	    else if ( isoValMapTrkHandle->contains(muonRefs_.at(i).id()) ) {
-	      const edm::ValueMap<float> ::value_type & muonDeposit = (*(isoValMapTrkHandle))[muonRefs_[i]];
+	    else if ( (triggerEnum == mmtk || triggerEnum == mmitk) && isoValMapTrkHandle_->contains(muonRefs_.at(i).id()) ) {
+	      const edm::ValueMap<float> ::value_type & muonDeposit = (*(isoValMapTrkHandle_))[muonRefs_[i]];
 	      iso = muonDeposit;
 	    } else {
 	      cout << "DilepTrigAnalyzerRECO::analyzeTrigger: ERROR: couldn't find id in iso val maps."
 		   << " id = " << muonRefs_.at(i).id() << endl
-		   << "  Gbl Map contains:" << endl;
-	      for (unsigned int j=0; j < isoValMapGblHandle->ids().size(); ++j) {
-		cout << "   " << isoValMapGblHandle->ids().at(j).first << endl;
+		   << "  Glb Map contains:" << endl;
+	      for (unsigned int j=0; j < isoValMapGlbHandle_->ids().size(); ++j) {
+		cout << "   " << isoValMapGlbHandle_->ids().at(j).first << endl;
 	      }
-	      cout << "  GblTrk Map contains:" << endl;
-	      for (unsigned int j=0; j < isoValMapTrkHandle->ids().size(); ++j) {
-		cout << "   " << isoValMapTrkHandle->ids().at(j).first << endl;
+	      cout << "  GlbTrk Map contains:" << endl;
+	      for (unsigned int j=0; j < isoValMapTrkHandle_->ids().size(); ++j) {
+		cout << "   " << isoValMapTrkHandle_->ids().at(j).first << endl;
 	      }
-	      cout << "  GblTrk Map contains:" << endl;
+	      cout << "  GlbTrk Map contains:" << endl;
 	    }
 	  }
 
@@ -482,20 +521,25 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	    hlt_mu_third_idx = hlt_mu_subl_idx;
 	    hlt_mu_third.lv = hlt_mu_subl.lv;
 	    hlt_mu_third.trkiso = hlt_mu_subl.trkiso;
+	    hlt_mu_third.vz = hlt_mu_subl.vz;
 	    hlt_mu_subl_idx = hlt_mu_lead_idx;
 	    hlt_mu_subl.lv = hlt_mu_lead.lv;
 	    hlt_mu_subl.trkiso = hlt_mu_lead.trkiso;
+	    hlt_mu_subl.vz = hlt_mu_lead.vz;
 	    hlt_mu_lead_idx = (int)i;
 	    hlt_mu_lead.lv = lv;
 	    hlt_mu_lead.trkiso = iso;
+	    hlt_mu_lead.vz = muonRefs_.at(i)->vz();
 	  } else if ( (hlt_mu_subl_idx == -1) || (lv.pt() > hlt_mu_subl.lv.pt()) ) {
 	    if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,lv) > 0.001) {
 	      hlt_mu_third_idx = hlt_mu_subl_idx;
 	      hlt_mu_third.lv = hlt_mu_subl.lv;
 	      hlt_mu_third.trkiso = hlt_mu_subl.trkiso;
+	      hlt_mu_third.vz = hlt_mu_subl.vz;
 	      hlt_mu_subl_idx = (int)i;
 	      hlt_mu_subl.lv = lv;
 	      hlt_mu_subl.trkiso = iso;
+	      hlt_mu_subl.vz = muonRefs_.at(i)->vz();
 	    }
 	  } else if ( (hlt_mu_third_idx == -1) || (lv.pt() > hlt_mu_third.lv.pt()) ) {
 	    if ( (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,lv) > 0.001) &&
@@ -503,6 +547,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	      hlt_mu_third_idx = (int)i;
 	      hlt_mu_third.lv = lv;
 	      hlt_mu_third.trkiso = iso;
+	      hlt_mu_third.vz = muonRefs_.at(i)->vz();
 	    }
 	  }
 	} // if !foundMuons
@@ -740,6 +785,9 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     bool pass_dz = bool(fabs(muon->muonBestTrack()->dz(firstGoodVertex->position())) < 0.5);
     if (!pass_dz) continue;
 
+    // min pt cut
+    if (muon->pt() < offSublPt_) continue;
+
     // check tight muon ID, to break ambiguity
     bool pass_tight_1 = muon::isTightMuon(*muon,*firstGoodVertex);
 
@@ -796,73 +844,89 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     bool pass_iso_tight = bool(pfiso/lv.pt() < 0.15);
 
     // pt ordering
-    if ( (off_mu_lead_idx == -1) || (lv.pt() > off_mu_lead.lv.pt()) ) {
-      off_mu_subl_idx = off_mu_lead_idx;
-      off_mu_subl = off_mu_lead;
+    if ( ((off_mu_lead_idx == -1) || (lv.pt() > off_mu_lead.lv.pt())) && (lv.pt() > offLeadPt_) ) {
+      if (off_mu_lead_idx != -1) {
+	off_mu_subl_idx = off_mu_lead_idx;
+	off_mu_subl = off_mu_lead;
+      }
 
       off_mu_lead_idx = (int)muonIndex;
       off_mu_lead.lv = lv;
       off_mu_lead.trkiso = trkiso;
       off_mu_lead.pfiso = pfiso;
-    } else if ( (off_mu_subl_idx == -1) || (lv.pt() > off_mu_subl.lv.pt()) ) {
+      off_mu_lead.vz = muon->vz();
+    } else if ( ((off_mu_subl_idx == -1) || (lv.pt() > off_mu_subl.lv.pt())) && (lv.pt() > offSublPt_) ) {
       off_mu_subl_idx = (int)muonIndex;
       off_mu_subl.lv = lv;
       off_mu_subl.trkiso = trkiso;
       off_mu_subl.pfiso = pfiso;
+      off_mu_subl.vz = muon->vz();
     }
 
     if (pass_tight) {
       // pt ordering
-      if ( (off_mu_tight_lead_idx == -1) || (lv.pt() > off_mu_tight_lead.lv.pt()) ) {
-	off_mu_tight_subl_idx = off_mu_tight_lead_idx;
-	off_mu_tight_subl = off_mu_tight_lead;
+      if ( (((off_mu_tight_lead_idx == -1) || (lv.pt() > off_mu_tight_lead.lv.pt())))  && (lv.pt() > offLeadPt_) ) {
+	if (off_mu_tight_lead_idx != -1) {
+	  off_mu_tight_subl_idx = off_mu_tight_lead_idx;
+	  off_mu_tight_subl = off_mu_tight_lead;
+	}
 
 	off_mu_tight_lead_idx = (int)muonIndex;
 	off_mu_tight_lead.lv = lv;
 	off_mu_tight_lead.trkiso = trkiso;
 	off_mu_tight_lead.pfiso = pfiso;
-      } else if ( (off_mu_tight_subl_idx == -1) || (lv.pt() > off_mu_tight_subl.lv.pt()) ) {
+	off_mu_tight_lead.vz = muon->vz();
+      } else if ( ((off_mu_tight_subl_idx == -1) || (lv.pt() > off_mu_tight_subl.lv.pt()))  && (lv.pt() > offSublPt_) ) {
 	off_mu_tight_subl_idx = (int)muonIndex;
 	off_mu_tight_subl.lv = lv;
 	off_mu_tight_subl.trkiso = trkiso;
 	off_mu_tight_subl.pfiso = pfiso;
+	off_mu_tight_subl.vz = muon->vz();
       }
     }
 
     //    if (pass_tight && pass_trkiso_trig) {
     if (pass_trkiso_trig) {
       // pt ordering
-      if ( (off_mu_trigiso_lead_idx == -1) || (lv.pt() > off_mu_trigiso_lead.lv.pt()) ) {
-	off_mu_trigiso_subl_idx = off_mu_trigiso_lead_idx;
-	off_mu_trigiso_subl = off_mu_trigiso_lead;
+      if ( ((off_mu_trigiso_lead_idx == -1) || (lv.pt() > off_mu_trigiso_lead.lv.pt()))  && (lv.pt() > offLeadPt_)) {
+	if (off_mu_trigiso_lead_idx != -1) {
+	  off_mu_trigiso_subl_idx = off_mu_trigiso_lead_idx;
+	  off_mu_trigiso_subl = off_mu_trigiso_lead;
+	}
 
 	off_mu_trigiso_lead_idx = (int)muonIndex;
 	off_mu_trigiso_lead.lv = lv;
 	off_mu_trigiso_lead.trkiso = trkiso;
 	off_mu_trigiso_lead.pfiso = pfiso;
-      } else if ( (off_mu_trigiso_subl_idx == -1) || (lv.pt() > off_mu_trigiso_subl.lv.pt()) ) {
+	off_mu_trigiso_lead.vz = muon->vz();
+      } else if ( ((off_mu_trigiso_subl_idx == -1) || (lv.pt() > off_mu_trigiso_subl.lv.pt()))  && (lv.pt() > offSublPt_)) {
 	off_mu_trigiso_subl_idx = (int)muonIndex;
 	off_mu_trigiso_subl.lv = lv;
 	off_mu_trigiso_subl.trkiso = trkiso;
 	off_mu_trigiso_subl.pfiso = pfiso;
+	off_mu_trigiso_subl.vz = muon->vz();
       }
     }
 
     if (pass_tight && pass_iso_tight) {
       // pt ordering
-      if ( (off_mu_tiso_lead_idx == -1) || (lv.pt() > off_mu_tiso_lead.lv.pt()) ) {
-	off_mu_tiso_subl_idx = off_mu_tiso_lead_idx;
-	off_mu_tiso_subl = off_mu_tiso_lead;
+      if ( ((off_mu_tiso_lead_idx == -1) || (lv.pt() > off_mu_tiso_lead.lv.pt()))  && (lv.pt() > offLeadPt_)) {
+	if (off_mu_tiso_lead_idx != -1) {
+	  off_mu_tiso_subl_idx = off_mu_tiso_lead_idx;
+	  off_mu_tiso_subl = off_mu_tiso_lead;
+	}
 
 	off_mu_tiso_lead_idx = (int)muonIndex;
 	off_mu_tiso_lead.lv = lv;
 	off_mu_tiso_lead.trkiso = trkiso;
 	off_mu_tiso_lead.pfiso = pfiso;
-      } else if ( (off_mu_tiso_subl_idx == -1) || (lv.pt() > off_mu_tiso_subl.lv.pt()) ) {
+	off_mu_tiso_lead.vz = muon->vz();
+      } else if ( ((off_mu_tiso_subl_idx == -1) || (lv.pt() > off_mu_tiso_subl.lv.pt()))  && (lv.pt() > offSublPt_)) {
 	off_mu_tiso_subl_idx = (int)muonIndex;
 	off_mu_tiso_subl.lv = lv;
 	off_mu_tiso_subl.trkiso = trkiso;
 	off_mu_tiso_subl.pfiso = pfiso;
+	off_mu_tiso_subl.vz = muon->vz();
       }
     }
 
@@ -930,24 +994,122 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
   // printout for cases where trigger is inefficient
   if ( verbose_ && ismm && (off_mu_trigiso_lead_idx >= 0) && (off_mu_trigiso_subl_idx >= 0) ) {
     // check that this is the noniso trigger, and that the iso trigger failed
+    LorentzVector dilep = off_mu_trigiso_lead.lv + off_mu_trigiso_subl.lv;
+    float deltaR = ROOT::Math::VectorUtil::DeltaR(off_mu_trigiso_lead.lv,off_mu_trigiso_subl.lv);
+    bool ineff = false;
     if ( (isoTriggerEnum != notrig) && ((trigpass_results_ & (1 << isoTriggerEnum)) == 0) ) {
-      LorentzVector dilep = off_mu_trigiso_lead.lv + off_mu_trigiso_subl.lv;
-      cout << "-- HLT inefficiency, event level! Non-iso trigger: " << triggerName << ", run: " << iEvent.id().run()
-	   << ", event: " << iEvent.id().event() << ", mass: " << dilep.M() << endl
-	   << "     hlt mu1 pt: " << hlt_mu_lead.lv.pt() << ", iso: " << hlt_mu_lead.trkiso
-	   << ", hlt mu2 pt: " << hlt_mu_subl.lv.pt() << ", iso: " << hlt_mu_subl.trkiso << endl
-	   << "     off mu1 pt: " << off_mu_trigiso_lead.lv.pt() << ", iso: " << off_mu_trigiso_lead.trkiso
-	   << ", off mu2 pt: " << off_mu_trigiso_subl.lv.pt() << ", iso: " << off_mu_trigiso_subl.trkiso << endl;
+      cout << "-- HLT inefficiency, event level! Non-iso trigger: " << triggerName;
+      ineff = true;
     }
     else if ( (isoTriggerEnum != notrig) && ((trigpass_results_offdilep_ & (1 << isoTriggerEnum)) == 0) ) {
-      LorentzVector dilep = off_mu_trigiso_lead.lv + off_mu_trigiso_subl.lv;
-      cout << "++ HLT inefficiency, offline object level! Non-iso trigger: " << triggerName << ", run: " << iEvent.id().run()
-	   << ", event: " << iEvent.id().event() << ", mass: " << dilep.M() << endl
+      cout << "++ HLT inefficiency, offline object level! Non-iso trigger: " << triggerName;
+      ineff = true;
+    }
+    if (ineff) {
+      cout << ", run: " << iEvent.id().run()
+	   << ", event: " << iEvent.id().event() << ", mass: " << dilep.M() << ", deltaR: " << deltaR << endl
 	   << "     hlt mu1 pt: " << hlt_mu_lead.lv.pt() << ", iso: " << hlt_mu_lead.trkiso
 	   << ", hlt mu2 pt: " << hlt_mu_subl.lv.pt() << ", iso: " << hlt_mu_subl.trkiso << endl
 	   << "     off mu1 pt: " << off_mu_trigiso_lead.lv.pt() << ", iso: " << off_mu_trigiso_lead.trkiso
 	   << ", off mu2 pt: " << off_mu_trigiso_subl.lv.pt() << ", iso: " << off_mu_trigiso_subl.trkiso << endl;
-    }
+      // loop over pf cands near the hlt muons and print them out..
+      if (dumpHLTPFCands_) {
+	edm::Handle<reco::PFCandidateCollection> hltPFCandsHandle;
+	if (triggerEnum == mm) hltPFCandsHandle = hltPFCandsGlbHandle_;
+	else hltPFCandsHandle = hltPFCandsTrkHandle_;
+	const VertexCollection* hltVertexCollection = hltVertexHandle_.product();
+
+	// find hlt pf cands near hlt muons
+        PFCandidateCollection::const_iterator hlt_pfcands_end = hltPFCandsHandle->end();  // Iterator
+	PFCandidateCollection hlt_pfcands_lead;
+	PFCandidateCollection hlt_pfcands_subl;
+	for ( PFCandidateCollection::const_iterator hlt_pfcand = hltPFCandsHandle->begin(); hlt_pfcand != hlt_pfcands_end; ++hlt_pfcand ) {
+	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,hlt_pfcand->p4()) < 0.3) {
+	    hlt_pfcands_lead.push_back(*hlt_pfcand);
+	  }
+	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,hlt_pfcand->p4()) < 0.3) {
+	    hlt_pfcands_subl.push_back(*hlt_pfcand);
+	  }
+	} // loop on hlt pf cands
+
+	// find off pf cands near hlt muons
+        PFCandidateCollection::const_iterator off_pfcands_end = offPFCandsHandle_->end();  // Iterator
+	PFCandidateCollection off_pfcands_lead;
+	PFCandidateCollection off_pfcands_subl;
+	for ( PFCandidateCollection::const_iterator off_pfcand = offPFCandsHandle_->begin(); off_pfcand != off_pfcands_end; ++off_pfcand ) {
+	  if (abs(off_pfcand->charge()) != 1) continue;
+
+	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,off_pfcand->p4()) < 0.3) {
+	    off_pfcands_lead.push_back(*off_pfcand);
+	  }
+	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,off_pfcand->p4()) < 0.3) {
+	    off_pfcands_subl.push_back(*off_pfcand);
+	  }
+	} // loop on off pf cands
+
+	// dump hlt pf cands near lead hlt muon
+	cout << "   ---- hlt pf cands near leading hlt muon:" << endl;
+        PFCandidateCollection::const_iterator hlt_pfcands_lead_end = hlt_pfcands_lead.end();  // Iterator
+	for ( PFCandidateCollection::const_iterator hlt_pfcand = hlt_pfcands_lead.begin(); hlt_pfcand != hlt_pfcands_lead_end; ++hlt_pfcand ) {
+	  float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,hlt_pfcand->p4());
+	  int vtx = chargedHadronVertex(*hltVertexCollection,*hlt_pfcand);
+	  float dz = hlt_mu_lead.vz - hlt_pfcand->vz();
+	  if (fabs(dz) > 1.0) continue;
+	  else if (fabs(dz) < 0.2) cout << "    * ";
+	  else cout << "      ";
+	  cout << "pt: " << hlt_pfcand->pt() << ", eta: " << hlt_pfcand->eta() << ", phi: " << hlt_pfcand->phi()
+	       << ", id: " << hlt_pfcand->particleId() << ", vz: " << hlt_pfcand->vz() << ", vtx: " << vtx
+	       << ", nhits: " << hlt_pfcand->trackRef()->numberOfValidHits() << ", dR: " << dR << endl;
+	}
+
+	// dump off pf cands near lead hlt muon
+	cout << "   ++++ off pf cands near leading hlt muon:" << endl;
+        PFCandidateCollection::const_iterator off_pfcands_lead_end = off_pfcands_lead.end();  // Iterator
+	for ( PFCandidateCollection::const_iterator off_pfcand = off_pfcands_lead.begin(); off_pfcand != off_pfcands_lead_end; ++off_pfcand ) {
+	  float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,off_pfcand->p4());
+	  int vtx = chargedHadronVertex(*vertexCollection,*off_pfcand);
+	  float dz = hlt_mu_lead.vz - off_pfcand->vz();
+	  if (fabs(dz) > 1.0) continue;
+	  if (((vtx == 0) || (vtx == -1)) && (off_pfcand->particleId() == 1)) cout << "    * ";
+	  else cout << "      ";
+	  cout << "pt: " << off_pfcand->pt() << ", eta: " << off_pfcand->eta() << ", phi: " << off_pfcand->phi()
+	       << ", id: " << off_pfcand->particleId() << ", vz: " << off_pfcand->vz() << ", vtx: " << vtx
+	       << ", nhits: " << off_pfcand->trackRef()->numberOfValidHits() << ", dR: " << dR << endl;
+	}
+
+	// dump hlt pf cands near subl hlt muon
+	cout << "   ---- hlt pf cands near subleading hlt muon:" << endl;
+        PFCandidateCollection::const_iterator hlt_pfcands_subl_end = hlt_pfcands_subl.end();  // Iterator
+	for ( PFCandidateCollection::const_iterator hlt_pfcand = hlt_pfcands_subl.begin(); hlt_pfcand != hlt_pfcands_subl_end; ++hlt_pfcand ) {
+	  float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,hlt_pfcand->p4());
+	  int vtx = chargedHadronVertex(*hltVertexCollection,*hlt_pfcand);
+	  float dz = hlt_mu_lead.vz - hlt_pfcand->vz();
+	  if (fabs(dz) > 1.0) continue;
+	  else if (fabs(dz) < 0.2) cout << "    * ";
+	  else cout << "      ";
+	  cout << "pt: " << hlt_pfcand->pt() << ", eta: " << hlt_pfcand->eta() << ", phi: " << hlt_pfcand->phi()
+	       << ", id: " << hlt_pfcand->particleId() << ", vz: " << hlt_pfcand->vz() << ", vtx: " << vtx
+	       << ", nhits: " << hlt_pfcand->trackRef()->numberOfValidHits() << ", dR: " << dR << endl;
+	}
+
+	// dump off pf cands near subl hlt muon
+	cout << "   ++++ off pf cands near subleading hlt muon:" << endl;
+        PFCandidateCollection::const_iterator off_pfcands_subl_end = off_pfcands_subl.end();  // Iterator
+	for ( PFCandidateCollection::const_iterator off_pfcand = off_pfcands_subl.begin(); off_pfcand != off_pfcands_subl_end; ++off_pfcand ) {
+	  float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,off_pfcand->p4());
+	  int vtx = chargedHadronVertex(*vertexCollection,*off_pfcand);
+	  float dz = hlt_mu_lead.vz - off_pfcand->vz();
+	  if (fabs(dz) > 1.0) continue;
+	  if (((vtx == 0) || (vtx == -1)) && (off_pfcand->particleId() == 1)) cout << "    * ";
+	  else cout << "      ";
+	  cout << "pt: " << off_pfcand->pt() << ", eta: " << off_pfcand->eta() << ", phi: " << off_pfcand->phi()
+	       << ", id: " << off_pfcand->particleId() << ", vz: " << off_pfcand->vz() << ", vtx: " << vtx
+	       << ", nhits: " << off_pfcand->trackRef()->numberOfValidHits() << ", dR: " << dR << endl;
+	}
+
+      } // if dumpHLTPFCands
+    } // if ineff
+
   }
 
   return true;
@@ -1136,6 +1298,83 @@ float DilepTrigAnalyzerRECO::muonPFiso(const reco::Muon& muon) {
   float absiso = chiso + std::max(0.0, nhiso + emiso - 0.5 * deltaBeta);
   return absiso;
 
+}
+
+//____________________________________________________________________________
+// returns best match vertex.  Taken from PFPileUpAlgo, chargedHadronVertex
+int DilepTrigAnalyzerRECO::chargedHadronVertex( const reco::VertexCollection& vertices, const reco::PFCandidate& pfcand ) const {
+  if (pfcand.trackRef().isNull()) return -2;
+  return trackVertex(vertices,pfcand.trackRef());
+}
+
+//____________________________________________________________________________
+// returns best match vertex.  Taken from PFPileUpAlgo, chargedHadronVertex
+int DilepTrigAnalyzerRECO::trackVertex( const reco::VertexCollection& vertices, const reco::TrackRef& trackRef ) const {
+
+  reco::TrackBaseRef trackBaseRef( trackRef );
+  
+  size_t  iVertex = 0;
+  unsigned index=0;
+  unsigned nFoundVertex = 0;
+  typedef reco::VertexCollection::const_iterator IV;
+  typedef reco::Vertex::trackRef_iterator IT;
+  float bestweight=0;
+  for(IV iv=vertices.begin(); iv!=vertices.end(); ++iv, ++index) {
+
+    const reco::Vertex& vtx = *iv;
+    
+    // loop on tracks in vertices
+    for(IT iTrack=vtx.tracks_begin(); 
+	iTrack!=vtx.tracks_end(); ++iTrack) {
+	 
+      const reco::TrackBaseRef& baseRef = *iTrack;
+
+      // one of the tracks in the vertex is the same as 
+      // the track considered in the function
+      if(baseRef == trackBaseRef ) {
+	float w = vtx.trackWeight(baseRef);
+	//select the vertex for which the track has the highest weight
+	if (w > bestweight){
+	  bestweight=w;
+	  iVertex=index;
+	  nFoundVertex++;
+	}	 	
+      }
+    }
+  }
+
+  if (nFoundVertex>0){
+    if (nFoundVertex!=1)
+      edm::LogWarning("TrackOnTwoVertex")<<"a track is shared by at least two verteces. Used to be an assert";
+    return iVertex;
+  }
+  // no vertex found with this track. 
+
+  const bool checkClosestZVertex_ = true;
+  // optional: as a secondary solution, associate the closest vertex in z
+  if ( checkClosestZVertex_ ) {
+
+    double dzmin = 10000;
+    double ztrack = trackRef->vertex().z();
+    bool foundVertex = false;
+    index = 0;
+    for(IV iv=vertices.begin(); iv!=vertices.end(); ++iv, ++index) {
+
+      double dz = fabs(ztrack - iv->z());
+      if(dz<dzmin) {
+	dzmin = dz; 
+	iVertex = index;
+	foundVertex = true;
+      }
+    }
+
+    if( foundVertex ) 
+      return iVertex;  
+
+  }
+
+
+  return -1 ;
 }
 
 

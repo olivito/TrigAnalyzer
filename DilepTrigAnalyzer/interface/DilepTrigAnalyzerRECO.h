@@ -26,6 +26,10 @@
 #include "DataFormats/EgammaCandidates/interface/GsfElectronFwd.h"
 #include "DataFormats/MuonReco/interface/Muon.h"
 #include "DataFormats/MuonReco/interface/MuonFwd.h"
+#include "DataFormats/TrackReco/interface/TrackFwd.h"
+#include "DataFormats/Common/interface/ValueMap.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+#include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
@@ -46,6 +50,7 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
     float pfiso;
     int type;
     bool isHLT;
+    float vz;
   };
 
  public:
@@ -57,6 +62,11 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   virtual void beginRun(edm::Run const &, edm::EventSetup const&);
   virtual void analyze(const edm::Event&, const edm::EventSetup&);
   bool analyzeTrigger(const edm::Event&, const edm::EventSetup&, const hltTrigs triggerEnum);
+
+  int chargedHadronVertex(const reco::VertexCollection& vertices, 
+			const reco::PFCandidate& pfcand ) const;
+  int trackVertex(const reco::VertexCollection& vertices, 
+			const reco::TrackRef& trackRef ) const;
 
  private:
 
@@ -72,15 +82,24 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   /// module config parameters
   std::string   processName_;
   std::string   triggerName_;
+  std::string   mmIsoTriggerName_;
+  std::string   mmtkIsoTriggerName_;
   edm::InputTag triggerResultsTag_;
   edm::InputTag triggerEventTag_;
   edm::InputTag triggerEventWithRefsTag_;
   edm::InputTag electronsInputTag_;
   edm::InputTag muonsInputTag_;
   edm::InputTag vtxInputTag_;
+  edm::InputTag hltVtxInputTag_;
   bool getHLTIsoVals_;
-  edm::InputTag isoValMapGblTag_;
+  edm::InputTag isoValMapGlbTag_;
   edm::InputTag isoValMapTrkTag_;
+  bool dumpHLTPFCands_;
+  edm::InputTag hltPFCandsGlbTag_;
+  edm::InputTag hltPFCandsTrkTag_;
+  edm::InputTag offPFCandsTag_;
+  float offLeadPt_;
+  float offSublPt_;
   bool verbose_;
 
   /// additional class data memebers
@@ -94,8 +113,14 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   TH1F* h_results_offdilep_mm_;
   TH1F* h_results_em_;
   edm::Handle<reco::VertexCollection> vertexHandle_;
+  edm::Handle<reco::VertexCollection> hltVertexHandle_;
   edm::Handle<reco::GsfElectronCollection> elsHandle_;
   edm::Handle<reco::MuonCollection> musHandle_;
+  edm::Handle<edm::ValueMap<float> > isoValMapGlbHandle_;
+  edm::Handle<edm::ValueMap<float> > isoValMapTrkHandle_;
+  edm::Handle<reco::PFCandidateCollection> hltPFCandsGlbHandle_;
+  edm::Handle<reco::PFCandidateCollection> hltPFCandsTrkHandle_;
+  edm::Handle<reco::PFCandidateCollection> offPFCandsHandle_;
 
   std::map<std::string,TH1F*> hists_1d_;
   std::map<std::string,TH2F*> hists_2d_;
