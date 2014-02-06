@@ -20,10 +20,18 @@
 #include "DataFormats/EgammaCandidates/interface/Electron.h"
 #include "DataFormats/RecoCandidate/interface/RecoChargedCandidate.h"
 
+#include "TrackingTools/IPTools/interface/IPTools.h"
+#include "TrackingTools/TransientTrack/interface/TransientTrack.h"
+#include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
+#include "TrackingTools/Records/interface/TransientTrackRecord.h"
+
 // ROOT includes
 #include "Math/VectorUtil.h"
 
 #include <cassert>
+
+using namespace reco;
+using namespace edm;
 
 //
 // constructors and destructor
@@ -89,7 +97,7 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
   //  hltTriggerNames_.push_back("HLT_Mu17_ChPFIsoVVL_TkMu8_ChPFIsoVVL_v1");
   //  hltTriggerNames_.push_back("HLT_Mu17_NoMuChPFIsoVVL_TkMu8_NoMuChPFIsoVVL_v1");
   hltTriggerNames_.push_back(mmtkIsoTriggerName_);
-  hltTriggerNames_.push_back("HLT_Mu17_TkMu8_v15");
+  hltTriggerNames_.push_back("HLT_Mu17_TkMu8_v16");
   hltTriggerNames_.push_back("HLT_Mu8_TrkIsoVVL_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v1");
   hltTriggerNames_.push_back("HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v10");
   hltTriggerNames_.push_back("HLT_Mu17_TrkIsoVVL_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v1");
@@ -113,6 +121,8 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
       bookHists(fs,hltShortNames_.at(itrig),true);
       bookHists(fs,hltShortNames_.at(itrig)+"_tight");
       bookHists(fs,hltShortNames_.at(itrig)+"_trigiso");
+      bookHists(fs,hltShortNames_.at(itrig)+"_liso");
+      bookHists(fs,hltShortNames_.at(itrig)+"_tliso");
       bookHists(fs,hltShortNames_.at(itrig)+"_tiso");
     }
   } else if (triggerName_ == "emu") {
@@ -522,24 +532,29 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	    hlt_mu_third.lv = hlt_mu_subl.lv;
 	    hlt_mu_third.trkiso = hlt_mu_subl.trkiso;
 	    hlt_mu_third.vz = hlt_mu_subl.vz;
+	    hlt_mu_third.charge = hlt_mu_subl.charge;
 	    hlt_mu_subl_idx = hlt_mu_lead_idx;
 	    hlt_mu_subl.lv = hlt_mu_lead.lv;
 	    hlt_mu_subl.trkiso = hlt_mu_lead.trkiso;
 	    hlt_mu_subl.vz = hlt_mu_lead.vz;
+	    hlt_mu_subl.charge = hlt_mu_lead.charge;
 	    hlt_mu_lead_idx = (int)i;
 	    hlt_mu_lead.lv = lv;
 	    hlt_mu_lead.trkiso = iso;
 	    hlt_mu_lead.vz = muonRefs_.at(i)->vz();
+	    hlt_mu_lead.charge = muonRefs_.at(i)->charge();
 	  } else if ( (hlt_mu_subl_idx == -1) || (lv.pt() > hlt_mu_subl.lv.pt()) ) {
 	    if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,lv) > 0.001) {
 	      hlt_mu_third_idx = hlt_mu_subl_idx;
 	      hlt_mu_third.lv = hlt_mu_subl.lv;
 	      hlt_mu_third.trkiso = hlt_mu_subl.trkiso;
 	      hlt_mu_third.vz = hlt_mu_subl.vz;
+	      hlt_mu_third.charge = hlt_mu_subl.charge;
 	      hlt_mu_subl_idx = (int)i;
 	      hlt_mu_subl.lv = lv;
 	      hlt_mu_subl.trkiso = iso;
 	      hlt_mu_subl.vz = muonRefs_.at(i)->vz();
+	      hlt_mu_subl.charge = muonRefs_.at(i)->charge();
 	    }
 	  } else if ( (hlt_mu_third_idx == -1) || (lv.pt() > hlt_mu_third.lv.pt()) ) {
 	    if ( (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,lv) > 0.001) &&
@@ -548,6 +563,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	      hlt_mu_third.lv = lv;
 	      hlt_mu_third.trkiso = iso;
 	      hlt_mu_third.vz = muonRefs_.at(i)->vz();
+  	      hlt_mu_third.charge = muonRefs_.at(i)->charge();
 	    }
 	  }
 	} // if !foundMuons
@@ -745,6 +761,24 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
   int off_mu_trigiso_lead_idx = -1;
   int off_mu_trigiso_subl_idx = -1;
 
+  StudyLepton off_mu_liso_lead;
+  StudyLepton off_mu_liso_subl;
+  off_mu_liso_lead.type = 13;
+  off_mu_liso_subl.type = 13;
+  off_mu_liso_lead.isHLT = false;
+  off_mu_liso_subl.isHLT = false;
+  int off_mu_liso_lead_idx = -1;
+  int off_mu_liso_subl_idx = -1;
+
+  StudyLepton off_mu_tliso_lead;
+  StudyLepton off_mu_tliso_subl;
+  off_mu_tliso_lead.type = 13;
+  off_mu_tliso_subl.type = 13;
+  off_mu_tliso_lead.isHLT = false;
+  off_mu_tliso_subl.isHLT = false;
+  int off_mu_tliso_lead_idx = -1;
+  int off_mu_tliso_subl_idx = -1;
+
   StudyLepton off_mu_tiso_lead;
   StudyLepton off_mu_tiso_subl;
   off_mu_tiso_lead.type = 13;
@@ -828,20 +862,41 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 
   } // loop on reco muons
 
+  ///////////////////////////
+  // TransientTrackBuilder //
+  ///////////////////////////
+  ESHandle<TransientTrackBuilder> theTTBuilder;
+  iSetup.get<TransientTrackRecord>().get("TransientTrackBuilder",theTTBuilder);
 
   // loop again on duplicate-cleaned muon collection
-
-
   muonIndex = 0;
   muons_end = muons_good.end();  // Iterator
   for ( MuonCollection::const_iterator muon = muons_good.begin(); muon != muons_end; ++muon, ++muonIndex ) {
     LorentzVector lv(muon->p4());
 
+    bool pass_loose = muon::isLooseMuon(*muon);
     bool pass_tight = muon::isTightMuon(*muon,*firstGoodVertex);
     float trkiso = muon->pfIsolationR03().sumChargedHadronPt;
     bool pass_trkiso_trig = bool(trkiso/lv.pt() < 0.4);
     float pfiso = muonPFiso(*muon);
+    bool pass_iso_loose = bool(pfiso/lv.pt() < 0.4);
     bool pass_iso_tight = bool(pfiso/lv.pt() < 0.15);
+    // get 3d impact parameter significance, for ZZ sel
+    const TrackRef siTrack  = muon->innerTrack();
+    float ip3d_val = -999.;
+    float ip3d_err = -999.;
+    float ip3d_sig = -999.;
+    float dxy = -999.;
+    if ( siTrack.isNonnull() && firstGoodVertex != vertexCollection->end() ) {
+      TransientTrack tt       = theTTBuilder->build( siTrack );
+      Measurement1D ip3D      = IPTools::absoluteImpactParameter3D( tt, *firstGoodVertex ).second;
+      ip3d_val = ip3D.value();
+      ip3d_err = ip3D.error();
+      ip3d_sig = ip3d_val/ip3d_err;
+      dxy = siTrack->dxy(firstGoodVertex->position());
+    } 
+    bool pass_ip3d = bool(fabs(ip3d_sig) < 4.);
+    bool pass_dxy = bool(fabs(dxy) < 0.02);
 
     // pt ordering
     if ( ((off_mu_lead_idx == -1) || (lv.pt() > off_mu_lead.lv.pt())) && (lv.pt() > offLeadPt_) ) {
@@ -855,12 +910,14 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
       off_mu_lead.trkiso = trkiso;
       off_mu_lead.pfiso = pfiso;
       off_mu_lead.vz = muon->vz();
+      off_mu_lead.charge = muon->charge();
     } else if ( ((off_mu_subl_idx == -1) || (lv.pt() > off_mu_subl.lv.pt())) && (lv.pt() > offSublPt_) ) {
       off_mu_subl_idx = (int)muonIndex;
       off_mu_subl.lv = lv;
       off_mu_subl.trkiso = trkiso;
       off_mu_subl.pfiso = pfiso;
       off_mu_subl.vz = muon->vz();
+      off_mu_subl.charge = muon->charge();
     }
 
     if (pass_tight) {
@@ -876,17 +933,19 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	off_mu_tight_lead.trkiso = trkiso;
 	off_mu_tight_lead.pfiso = pfiso;
 	off_mu_tight_lead.vz = muon->vz();
+	off_mu_tight_lead.charge = muon->charge();
       } else if ( ((off_mu_tight_subl_idx == -1) || (lv.pt() > off_mu_tight_subl.lv.pt()))  && (lv.pt() > offSublPt_) ) {
 	off_mu_tight_subl_idx = (int)muonIndex;
 	off_mu_tight_subl.lv = lv;
 	off_mu_tight_subl.trkiso = trkiso;
 	off_mu_tight_subl.pfiso = pfiso;
 	off_mu_tight_subl.vz = muon->vz();
+        off_mu_tight_subl.charge = muon->charge();
       }
     }
 
     //    if (pass_tight && pass_trkiso_trig) {
-    if (pass_trkiso_trig) {
+    if (pass_loose && pass_trkiso_trig) {
       // pt ordering
       if ( ((off_mu_trigiso_lead_idx == -1) || (lv.pt() > off_mu_trigiso_lead.lv.pt()))  && (lv.pt() > offLeadPt_)) {
 	if (off_mu_trigiso_lead_idx != -1) {
@@ -899,16 +958,66 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	off_mu_trigiso_lead.trkiso = trkiso;
 	off_mu_trigiso_lead.pfiso = pfiso;
 	off_mu_trigiso_lead.vz = muon->vz();
+        off_mu_trigiso_lead.charge = muon->charge();
       } else if ( ((off_mu_trigiso_subl_idx == -1) || (lv.pt() > off_mu_trigiso_subl.lv.pt()))  && (lv.pt() > offSublPt_)) {
 	off_mu_trigiso_subl_idx = (int)muonIndex;
 	off_mu_trigiso_subl.lv = lv;
 	off_mu_trigiso_subl.trkiso = trkiso;
 	off_mu_trigiso_subl.pfiso = pfiso;
 	off_mu_trigiso_subl.vz = muon->vz();
+        off_mu_trigiso_subl.charge = muon->charge();
       }
     }
 
-    if (pass_tight && pass_iso_tight) {
+    if (pass_loose && pass_ip3d && pass_iso_loose) {
+      // pt ordering
+      if ( ((off_mu_liso_lead_idx == -1) || (lv.pt() > off_mu_liso_lead.lv.pt()))  && (lv.pt() > offLeadPt_)) {
+	if (off_mu_liso_lead_idx != -1) {
+	  off_mu_liso_subl_idx = off_mu_liso_lead_idx;
+	  off_mu_liso_subl = off_mu_liso_lead;
+	}
+
+	off_mu_liso_lead_idx = (int)muonIndex;
+	off_mu_liso_lead.lv = lv;
+	off_mu_liso_lead.trkiso = trkiso;
+	off_mu_liso_lead.pfiso = pfiso;
+	off_mu_liso_lead.vz = muon->vz();
+        off_mu_liso_lead.charge = muon->charge();
+      } else if ( ((off_mu_liso_subl_idx == -1) || (lv.pt() > off_mu_liso_subl.lv.pt()))  && (lv.pt() > offSublPt_)) {
+	off_mu_liso_subl_idx = (int)muonIndex;
+	off_mu_liso_subl.lv = lv;
+	off_mu_liso_subl.trkiso = trkiso;
+	off_mu_liso_subl.pfiso = pfiso;
+	off_mu_liso_subl.vz = muon->vz();
+        off_mu_liso_subl.charge = muon->charge();
+      }
+    }
+
+    if (pass_tight && pass_iso_loose) {
+      // pt ordering
+      if ( ((off_mu_tliso_lead_idx == -1) || (lv.pt() > off_mu_tliso_lead.lv.pt()))  && (lv.pt() > offLeadPt_)) {
+	if (off_mu_tliso_lead_idx != -1) {
+	  off_mu_tliso_subl_idx = off_mu_tliso_lead_idx;
+	  off_mu_tliso_subl = off_mu_tliso_lead;
+	}
+
+	off_mu_tliso_lead_idx = (int)muonIndex;
+	off_mu_tliso_lead.lv = lv;
+	off_mu_tliso_lead.trkiso = trkiso;
+	off_mu_tliso_lead.pfiso = pfiso;
+	off_mu_tliso_lead.vz = muon->vz();
+        off_mu_tliso_lead.charge = muon->charge();
+      } else if ( ((off_mu_tliso_subl_idx == -1) || (lv.pt() > off_mu_tliso_subl.lv.pt()))  && (lv.pt() > offSublPt_)) {
+	off_mu_tliso_subl_idx = (int)muonIndex;
+	off_mu_tliso_subl.lv = lv;
+	off_mu_tliso_subl.trkiso = trkiso;
+	off_mu_tliso_subl.pfiso = pfiso;
+	off_mu_tliso_subl.vz = muon->vz();
+        off_mu_tliso_subl.charge = muon->charge();
+      }
+    }
+
+    if (pass_tight && pass_iso_tight && pass_dxy) {
       // pt ordering
       if ( ((off_mu_tiso_lead_idx == -1) || (lv.pt() > off_mu_tiso_lead.lv.pt()))  && (lv.pt() > offLeadPt_)) {
 	if (off_mu_tiso_lead_idx != -1) {
@@ -921,12 +1030,14 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	off_mu_tiso_lead.trkiso = trkiso;
 	off_mu_tiso_lead.pfiso = pfiso;
 	off_mu_tiso_lead.vz = muon->vz();
+        off_mu_tiso_lead.charge = muon->charge();
       } else if ( ((off_mu_tiso_subl_idx == -1) || (lv.pt() > off_mu_tiso_subl.lv.pt()))  && (lv.pt() > offSublPt_)) {
 	off_mu_tiso_subl_idx = (int)muonIndex;
 	off_mu_tiso_subl.lv = lv;
 	off_mu_tiso_subl.trkiso = trkiso;
 	off_mu_tiso_subl.pfiso = pfiso;
 	off_mu_tiso_subl.vz = muon->vz();
+        off_mu_tiso_subl.charge = muon->charge();
       }
     }
 
@@ -949,6 +1060,14 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
       fillHists(off_mu_trigiso_lead,off_mu_trigiso_subl,triggerShort+"_trigiso",false);
       fillHistsRecoHLT(off_mu_trigiso_lead,off_mu_trigiso_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_trigiso");
       if (off_mu_trigiso_subl_idx >= 0) trigpass_results_offdilep_ |= 1 << int(triggerEnum);
+    }
+    if (off_mu_liso_lead_idx >= 0) {
+      fillHists(off_mu_liso_lead,off_mu_liso_subl,triggerShort+"_liso",false);
+      fillHistsRecoHLT(off_mu_liso_lead,off_mu_liso_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_liso");
+    }
+    if (off_mu_tliso_lead_idx >= 0) {
+      fillHists(off_mu_tliso_lead,off_mu_tliso_subl,triggerShort+"_tliso",false);
+      fillHistsRecoHLT(off_mu_tliso_lead,off_mu_tliso_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_tliso");
     }
     if (off_mu_tiso_lead_idx >= 0) {
       fillHists(off_mu_tiso_lead,off_mu_tiso_subl,triggerShort+"_tiso",false);
@@ -1145,6 +1264,20 @@ void DilepTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const std:
   hists_1d_["h_mll"+suf] = fs->make<TH1F>(Form("h_mll%s",suf.c_str()) , "; M_{ll} [GeV]" , 150 , 0. , 150. );
   hists_1d_["h_dr"+suf] = fs->make<TH1F>(Form("h_dr%s",suf.c_str()) , "; #DeltaR" , 600 , 0. , 6. );
 
+  hists_1d_["h_lead_pt_os"+suf] = fs->make<TH1F>(Form("h_lead_pt_os%s",suf.c_str()) , "; Leading p_{T} [GeV]" , 100 , 0. , 100. );
+  hists_1d_["h_subl_pt_os"+suf] = fs->make<TH1F>(Form("h_subl_pt_os%s",suf.c_str()) , "; Subleading p_{T} [GeV]" , 100 , 0. , 100. );
+  hists_1d_["h_lead_eta_os"+suf] = fs->make<TH1F>(Form("h_lead_eta_os%s",suf.c_str()) , "; Leading #eta" , 100 , -3. , 3. );
+  hists_1d_["h_subl_eta_os"+suf] = fs->make<TH1F>(Form("h_subl_eta_os%s",suf.c_str()) , "; Subleading #eta" , 100 , -3. , 3. );
+  hists_1d_["h_mll_os"+suf] = fs->make<TH1F>(Form("h_mll_os%s",suf.c_str()) , "; M_{ll} [GeV]" , 150 , 0. , 150. );
+  hists_1d_["h_dr_os"+suf] = fs->make<TH1F>(Form("h_dr_os%s",suf.c_str()) , "; #DeltaR" , 600 , 0. , 6. );
+
+  hists_1d_["h_lead_pt_ss"+suf] = fs->make<TH1F>(Form("h_lead_pt_ss%s",suf.c_str()) , "; Leading p_{T} [GeV]" , 100 , 0. , 100. );
+  hists_1d_["h_subl_pt_ss"+suf] = fs->make<TH1F>(Form("h_subl_pt_ss%s",suf.c_str()) , "; Subleading p_{T} [GeV]" , 100 , 0. , 100. );
+  hists_1d_["h_lead_eta_ss"+suf] = fs->make<TH1F>(Form("h_lead_eta_ss%s",suf.c_str()) , "; Leading #eta" , 100 , -3. , 3. );
+  hists_1d_["h_subl_eta_ss"+suf] = fs->make<TH1F>(Form("h_subl_eta_ss%s",suf.c_str()) , "; Subleading #eta" , 100 , -3. , 3. );
+  hists_1d_["h_mll_ss"+suf] = fs->make<TH1F>(Form("h_mll_ss%s",suf.c_str()) , "; M_{ll} [GeV]" , 150 , 0. , 150. );
+  hists_1d_["h_dr_ss"+suf] = fs->make<TH1F>(Form("h_dr_ss%s",suf.c_str()) , "; #DeltaR" , 600 , 0. , 6. );
+
   hists_1d_["h_lead_abstrkiso"+suf] = fs->make<TH1F>(Form("h_lead_abstrkiso%s",suf.c_str()) , "; Leading trkiso [GeV]" , 200 , 0. , 10. );
   hists_1d_["h_subl_abstrkiso"+suf] = fs->make<TH1F>(Form("h_subl_abstrkiso%s",suf.c_str()) , "; Subleading trkiso [GeV]" , 200 , 0. , 10. );
   hists_1d_["h_lead_reltrkiso"+suf] = fs->make<TH1F>(Form("h_lead_reltrkiso%s",suf.c_str()) , "; Leading trkiso / p_{T}" , 200 , 0. , 2. );
@@ -1177,6 +1310,8 @@ void DilepTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLepton
   //   return;
   // }
 
+  //  std::cout << "DilepTrigAnalyzerRECO::fillHists: called with suffix: " << suffix << ", isHLT: " << isHLT << std::endl;
+
   std::string suf(suffix);
   if (suffix.size()) suf = "_"+suffix;
 
@@ -1199,9 +1334,28 @@ void DilepTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLepton
   if (subl.lv.pt() > 0) {
     hists_1d_["h_subl_pt"+suf+hlt_suf]->Fill(subl.lv.pt());
     hists_1d_["h_subl_eta"+suf+hlt_suf]->Fill(subl.lv.eta());
-    LorentzVector dilep = lead.lv+subl.lv;
-    hists_1d_["h_mll"+suf+hlt_suf]->Fill(dilep.M());
-    hists_1d_["h_dr"+suf+hlt_suf]->Fill(ROOT::Math::VectorUtil::DeltaR(lead.lv,subl.lv));
+
+    if (lead.lv.pt() > 0) {
+      LorentzVector dilep = lead.lv+subl.lv;
+      hists_1d_["h_mll"+suf+hlt_suf]->Fill(dilep.M());
+      float dr = ROOT::Math::VectorUtil::DeltaR(lead.lv,subl.lv);
+      hists_1d_["h_dr"+suf+hlt_suf]->Fill(dr);
+      if (!isHLT && (lead.charge == subl.charge)) {
+	hists_1d_["h_lead_pt_ss"+suf+hlt_suf]->Fill(lead.lv.pt());
+	hists_1d_["h_lead_eta_ss"+suf+hlt_suf]->Fill(lead.lv.eta());
+	hists_1d_["h_subl_pt_ss"+suf+hlt_suf]->Fill(subl.lv.pt());
+	hists_1d_["h_subl_eta_ss"+suf+hlt_suf]->Fill(subl.lv.eta());
+	hists_1d_["h_mll_ss"+suf+hlt_suf]->Fill(dilep.M());
+	hists_1d_["h_dr_ss"+suf+hlt_suf]->Fill(dr);
+      } else if (!isHLT) {
+	hists_1d_["h_lead_pt_os"+suf+hlt_suf]->Fill(lead.lv.pt());
+	hists_1d_["h_lead_eta_os"+suf+hlt_suf]->Fill(lead.lv.eta());
+	hists_1d_["h_subl_pt_os"+suf+hlt_suf]->Fill(subl.lv.pt());
+	hists_1d_["h_subl_eta_os"+suf+hlt_suf]->Fill(subl.lv.eta());
+	hists_1d_["h_mll_os"+suf+hlt_suf]->Fill(dilep.M());
+	hists_1d_["h_dr_os"+suf+hlt_suf]->Fill(dr);
+      }
+    }
     if (subl.type == 13) {
       hists_1d_["h_subl_abstrkiso"+suf+hlt_suf]->Fill(subl.trkiso);
       hists_1d_["h_subl_reltrkiso"+suf+hlt_suf]->Fill(subl.trkiso/subl.lv.pt());

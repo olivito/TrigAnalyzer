@@ -9,6 +9,8 @@
   <use   name="DataFormats/Provenance"/>
   <use   name="DataFormats/RecoCandidate"/>
   <use   name="DataFormats/TauReco"/>
+  <use   name="TrackingTools/IPTools"/>
+  <use   name="TrackingTools/TransientTrack"/>
   <use   name="HLTrigger/HLTcore"/>
   <use   name="FWCore/PrescaleService"/>
   <use   name="FWCore/ServiceRegistry"/>

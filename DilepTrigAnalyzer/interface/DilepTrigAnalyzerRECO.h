@@ -51,6 +51,7 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
     int type;
     bool isHLT;
     float vz;
+    int charge;
   };
 
  public:
