@@ -1050,29 +1050,25 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 
   // make plots based on trigger path
   if (ismm) {
+    // no offline sel
     fillHists(off_mu_lead,off_mu_subl,triggerShort,false);
     fillHistsRecoHLT(off_mu_lead,off_mu_subl,hlt_mu_lead,hlt_mu_subl,triggerShort);
-    if (off_mu_tight_lead_idx >= 0) {
-      fillHists(off_mu_tight_lead,off_mu_tight_subl,triggerShort+"_tight",false);
-      fillHistsRecoHLT(off_mu_tight_lead,off_mu_tight_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_tight");
-    }
-    if (off_mu_trigiso_lead_idx >= 0) {
-      fillHists(off_mu_trigiso_lead,off_mu_trigiso_subl,triggerShort+"_trigiso",false);
-      fillHistsRecoHLT(off_mu_trigiso_lead,off_mu_trigiso_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_trigiso");
-      if (off_mu_trigiso_subl_idx >= 0) trigpass_results_offdilep_ |= 1 << int(triggerEnum);
-    }
-    if (off_mu_liso_lead_idx >= 0) {
-      fillHists(off_mu_liso_lead,off_mu_liso_subl,triggerShort+"_liso",false);
-      fillHistsRecoHLT(off_mu_liso_lead,off_mu_liso_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_liso");
-    }
-    if (off_mu_tliso_lead_idx >= 0) {
-      fillHists(off_mu_tliso_lead,off_mu_tliso_subl,triggerShort+"_tliso",false);
-      fillHistsRecoHLT(off_mu_tliso_lead,off_mu_tliso_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_tliso");
-    }
-    if (off_mu_tiso_lead_idx >= 0) {
-      fillHists(off_mu_tiso_lead,off_mu_tiso_subl,triggerShort+"_tiso",false);
-      fillHistsRecoHLT(off_mu_tiso_lead,off_mu_tiso_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_tiso");
-    }
+    // offline tight
+    fillHists(off_mu_tight_lead,off_mu_tight_subl,triggerShort+"_tight",false);
+    fillHistsRecoHLT(off_mu_tight_lead,off_mu_tight_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_tight");
+    // offline trigiso
+    fillHists(off_mu_trigiso_lead,off_mu_trigiso_subl,triggerShort+"_trigiso",false);
+    fillHistsRecoHLT(off_mu_trigiso_lead,off_mu_trigiso_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_trigiso");
+    if ((off_mu_trigiso_lead_idx >= 0) && (off_mu_trigiso_subl_idx >= 0)) trigpass_results_offdilep_ |= 1 << int(triggerEnum);
+    // offline liso (ZZ selection)
+    fillHists(off_mu_liso_lead,off_mu_liso_subl,triggerShort+"_liso",false);
+    fillHistsRecoHLT(off_mu_liso_lead,off_mu_liso_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_liso");
+    // offline tliso (denom sel)
+    fillHists(off_mu_tliso_lead,off_mu_tliso_subl,triggerShort+"_tliso",false);
+    fillHistsRecoHLT(off_mu_tliso_lead,off_mu_tliso_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_tliso");
+    // offline tiso (signal sel)
+    fillHists(off_mu_tiso_lead,off_mu_tiso_subl,triggerShort+"_tiso",false);
+    fillHistsRecoHLT(off_mu_tiso_lead,off_mu_tiso_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_tiso");
   } // ismm
 
   else if (isem) {
@@ -1257,6 +1253,8 @@ void DilepTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const std:
 
   }
 
+  hists_1d_["h_nlep_off"+suf] = fs->make<TH1F>(Form("h_nlep_off%s",suf.c_str()) , "; Offline N(lep)" , 3 , -0.5 , 2.5 );
+
   hists_1d_["h_lead_pt"+suf] = fs->make<TH1F>(Form("h_lead_pt%s",suf.c_str()) , "; Leading p_{T} [GeV]" , 100 , 0. , 100. );
   hists_1d_["h_subl_pt"+suf] = fs->make<TH1F>(Form("h_subl_pt%s",suf.c_str()) , "; Subleading p_{T} [GeV]" , 100 , 0. , 100. );
   hists_1d_["h_lead_eta"+suf] = fs->make<TH1F>(Form("h_lead_eta%s",suf.c_str()) , "; Leading #eta" , 100 , -3. , 3. );
@@ -1317,6 +1315,12 @@ void DilepTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLepton
 
   std::string hlt_suf("");
   if (isHLT) hlt_suf = "_hlt";
+
+  int nlep = 0;
+  if (lead.lv.pt() > 0) ++nlep;
+  if (subl.lv.pt() > 0) ++nlep;
+  if (!isHLT) hists_1d_["h_nlep_off"+suf+hlt_suf]->Fill(nlep);
+  if (nlep == 0) return;
 
   if (lead.lv.pt() > 0) {
     hists_1d_["h_lead_pt"+suf+hlt_suf]->Fill(lead.lv.pt());
@@ -1379,6 +1383,11 @@ void DilepTrigAnalyzerRECO::fillHistsRecoHLT(const StudyLepton& off_lead, const 
 
   std::string suf(suffix);
   if (suffix.size()) suf = "_"+suffix;
+
+  int nlep = 0;
+  if (off_lead.lv.pt() > 0) ++nlep;
+  if (off_subl.lv.pt() > 0) ++nlep;
+  if (nlep == 0) return;
 
   if (off_lead.lv.pt() > 0.) {
     bool match_lead = false;
