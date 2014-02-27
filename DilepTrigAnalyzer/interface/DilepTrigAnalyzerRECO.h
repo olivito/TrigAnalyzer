@@ -83,7 +83,9 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   /// module config parameters
   std::string   processName_;
   std::string   triggerName_;
+  std::string   mmBaseTriggerName_;
   std::string   mmIsoTriggerName_;
+  std::string   mmtkBaseTriggerName_;
   std::string   mmtkIsoTriggerName_;
   edm::InputTag triggerResultsTag_;
   edm::InputTag triggerEventTag_;
@@ -96,6 +98,7 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   edm::InputTag isoValMapGlbTag_;
   edm::InputTag isoValMapTrkTag_;
   bool dumpHLTPFCands_;
+  edm::InputTag hltTracksGlbTag_;
   edm::InputTag hltPFCandsGlbTag_;
   edm::InputTag hltPFCandsTrkTag_;
   edm::InputTag offPFCandsTag_;
@@ -119,6 +122,7 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   edm::Handle<reco::MuonCollection> musHandle_;
   edm::Handle<edm::ValueMap<float> > isoValMapGlbHandle_;
   edm::Handle<edm::ValueMap<float> > isoValMapTrkHandle_;
+  edm::Handle<reco::TrackCollection> hltTracksGlbHandle_;
   edm::Handle<reco::PFCandidateCollection> hltPFCandsGlbHandle_;
   edm::Handle<reco::PFCandidateCollection> hltPFCandsTrkHandle_;
   edm::Handle<reco::PFCandidateCollection> offPFCandsHandle_;
