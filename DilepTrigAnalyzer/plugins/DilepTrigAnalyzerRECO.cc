@@ -25,6 +25,8 @@
 #include "TrackingTools/TransientTrack/interface/TransientTrackBuilder.h"
 #include "TrackingTools/Records/interface/TransientTrackRecord.h"
 
+#include "EgammaAnalysis/ElectronTools/interface/EGammaCutBasedEleId.h"
+
 // ROOT includes
 #include "Math/VectorUtil.h"
 
@@ -44,6 +46,10 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
   mmIsoTriggerName_(ps.getParameter<std::string>("mmIsoTriggerName")),
   mmtkBaseTriggerName_(ps.getParameter<std::string>("mmtkBaseTriggerName")),
   mmtkIsoTriggerName_(ps.getParameter<std::string>("mmtkIsoTriggerName")),
+  emBaseTriggerName_(ps.getParameter<std::string>("emBaseTriggerName")),
+  emIsoTriggerName_(ps.getParameter<std::string>("emIsoTriggerName")),
+  meBaseTriggerName_(ps.getParameter<std::string>("meBaseTriggerName")),
+  meIsoTriggerName_(ps.getParameter<std::string>("meIsoTriggerName")),
   triggerResultsTag_(ps.getParameter<edm::InputTag>("triggerResults")),
   triggerEventTag_(ps.getParameter<edm::InputTag>("triggerEvent")),
   triggerEventWithRefsTag_(ps.getParameter<edm::InputTag>("triggerEventWithRefs")),
@@ -56,9 +62,11 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
   isoValMapTrkTag_(ps.getParameter<edm::InputTag>("isoValMapTrk")),
   dumpHLTPFCands_(ps.getParameter<bool>("dumpHLTPFCands")),
   hltTracksGlbTag_(ps.getParameter<edm::InputTag>("hltTracksGlb")),
+  offTracksTag_(ps.getParameter<edm::InputTag>("offTracks")),
   hltPFCandsGlbTag_(ps.getParameter<edm::InputTag>("hltPFCandsGlb")),
   hltPFCandsTrkTag_(ps.getParameter<edm::InputTag>("hltPFCandsTrk")),
   offPFCandsTag_(ps.getParameter<edm::InputTag>("offPFCands")),
+  reqTrigMatch_(ps.getParameter<bool>("reqTrigMatch")),
   offLeadPt_(ps.getParameter<double>("offLeadPt")),
   offSublPt_(ps.getParameter<double>("offSublPt")),
   verbose_(ps.getParameter<bool>("verbose"))
@@ -69,8 +77,14 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
   cout << "DilepTrigAnalyzerRECO configuration: " << endl
        << "   ProcessName = " << processName_ << endl
        << "   TriggerName = " << triggerName_ << endl
+       << "   mmBaseTriggerName = " << mmBaseTriggerName_ << endl
        << "   mmIsoTriggerName = " << mmIsoTriggerName_ << endl
+       << "   mmtkBaseTriggerName = " << mmtkBaseTriggerName_ << endl
        << "   mmtkIsoTriggerName = " << mmtkIsoTriggerName_ << endl
+       << "   emBaseTriggerName = " << emBaseTriggerName_ << endl
+       << "   emIsoTriggerName = " << emIsoTriggerName_ << endl
+       << "   meBaseTriggerName = " << meBaseTriggerName_ << endl
+       << "   meIsoTriggerName = " << meIsoTriggerName_ << endl
        << "   TriggerResultsTag = " << triggerResultsTag_.encode() << endl
        << "   TriggerEventTag = " << triggerEventTag_.encode() << endl
        << "   TriggerEventWithRefsTag = " << triggerEventWithRefsTag_.encode() << endl
@@ -83,9 +97,11 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
        << "   IsoValMapTrkTag = " << isoValMapTrkTag_.encode() << endl
        << "   DumpHLTPFCands = " << dumpHLTPFCands_ << endl
        << "   HLTTracksGlbTag = " << hltTracksGlbTag_.encode() << endl
+       << "   OffTracksTag = " << offTracksTag_.encode() << endl
        << "   HLTPFCandsGlbTag = " << hltPFCandsGlbTag_.encode() << endl
        << "   HLTPFCandsTrkTag = " << hltPFCandsTrkTag_.encode() << endl
        << "   OffPFCandsTag = " << offPFCandsTag_.encode() << endl
+       << "   ReqTrigMatch = " << reqTrigMatch_ << endl
        << "   OffLeadPt = " << offLeadPt_ << endl
        << "   OffSublPt = " << offSublPt_ << endl
        << "   Verbose = " << verbose_ << endl;
@@ -104,10 +120,16 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
   hltTriggerNames_.push_back(mmtkIsoTriggerName_);
   //  hltTriggerNames_.push_back("HLT_Mu17_TkMu8_v16");
   hltTriggerNames_.push_back(mmtkBaseTriggerName_);
-  hltTriggerNames_.push_back("HLT_Mu8_TrkIsoVVL_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v1");
-  hltTriggerNames_.push_back("HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v10");
-  hltTriggerNames_.push_back("HLT_Mu17_TrkIsoVVL_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v1");
-  hltTriggerNames_.push_back("HLT_Mu17_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v10");
+
+  hltTriggerNames_.push_back(emIsoTriggerName_);
+  hltTriggerNames_.push_back(emBaseTriggerName_);
+  hltTriggerNames_.push_back(meIsoTriggerName_);
+  hltTriggerNames_.push_back(meBaseTriggerName_);
+
+  // hltTriggerNames_.push_back("HLT_Mu8_IterTrkIsoVVL_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v1");
+  // hltTriggerNames_.push_back("HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v10");
+  // hltTriggerNames_.push_back("HLT_Mu17_IterTrkIsoVVL_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v1");
+  // hltTriggerNames_.push_back("HLT_Mu17_Ele8_CaloIdT_CaloIsoVL_TrkIdVL_TrkIsoVL_v10");
 
   hltShortNames_.push_back("mmi");
   hltShortNames_.push_back("mm");
@@ -137,6 +159,8 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
       bookHists(fs,hltShortNames_.at(itrig),true);
       bookHists(fs,hltShortNames_.at(itrig)+"_tight");
       bookHists(fs,hltShortNames_.at(itrig)+"_trigiso");
+      bookHists(fs,hltShortNames_.at(itrig)+"_liso");
+      bookHists(fs,hltShortNames_.at(itrig)+"_tliso");
       bookHists(fs,hltShortNames_.at(itrig)+"_tiso");
     }
   }
@@ -246,7 +270,8 @@ DilepTrigAnalyzerRECO::analyze(const edm::Event& iEvent, const edm::EventSetup& 
   // for printing out HLT PF Cand info
   if (dumpHLTPFCands_) {
     iEvent.getByLabel(hltTracksGlbTag_, hltTracksGlbHandle_);
-    iEvent.getByLabel(hltPFCandsGlbTag_, hltPFCandsGlbHandle_);
+    iEvent.getByLabel(offTracksTag_, offTracksHandle_);
+    //    iEvent.getByLabel(hltPFCandsGlbTag_, hltPFCandsGlbHandle_);
     //    iEvent.getByLabel(hltPFCandsTrkTag_, hltPFCandsTrkHandle_);
     iEvent.getByLabel(offPFCandsTag_, offPFCandsHandle_);
     iEvent.getByLabel(hltVtxInputTag_, hltVertexHandle_);
@@ -691,6 +716,17 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
   }
 
   //-------------------------------------
+  //   pt thresholds - depend on trigger
+  //-------------------------------------
+
+  float leadPtThresh_e = offLeadPt_;
+  float sublPtThresh_e = offSublPt_;
+  float leadPtThresh_m = offLeadPt_;
+  float sublPtThresh_m = offSublPt_;
+  if (isem) leadPtThresh_m = offSublPt_;
+  else if (isme) leadPtThresh_e = offSublPt_;
+
+  //-------------------------------------
   //   reco electrons 
   //-------------------------------------
 
@@ -715,19 +751,37 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
   for( GsfElectronCollection::const_iterator el = elsHandle_->begin(); el != els_end; ++el, ++elsIndex ) {
     LorentzVector lv(el->p4());
 
+    if (verbose_) cout << " - reco ele: pt: " << lv.pt() << ", eta: " << lv.eta() << ", phi: " << lv.phi(); 
+
+    if (lv.pt() < sublPtThresh_e) {
+      if (verbose_) cout << ", FAILS pt" << std::endl;
+      continue;
+    }
+
     // check for match to trigger objects
     bool match = false;
     if ( (hlt_el_lead_idx >= 0) && (ROOT::Math::VectorUtil::DeltaR(lv,hlt_el_lead.lv) < dr_trigmatch) ) match = true;
     else if ( (hlt_el_subl_idx >= 0) && (ROOT::Math::VectorUtil::DeltaR(lv,hlt_el_subl.lv) < dr_trigmatch) ) match = true;
-    if (!match) continue;
+    if (!match && reqTrigMatch_) {
+      if (verbose_) cout << ", FAILS trig match" << std::endl;
+      continue;
+    }
+
+    // check loose ID (probably 2012 version)
+//     float chpfiso = el->pfIsolationVariables().sumChargedHadronPt;
+//     float nhpfiso = el->pfIsolationVariables().sumNeutralHadronPt;
+//     float phpfiso = el->pfIsolationVariables().sumPhotonEt;
+// bool pass_loose = EgammaCutBasedEleId::TestWP(EgammaCutBasedEleId::LOOSE , el, convs_h, beamSpotreco, vertexHandle, pfiso_ch, pfiso_em, pfiso_nh, rhoIso);
+
+    if (verbose_) cout << ", passes presel cuts" << std::endl;
 
     // pt ordering
-    if ( (off_el_lead_idx == -1) || (lv.pt() > off_el_lead.lv.pt()) ) {
+    if ( ((off_el_lead_idx == -1) || (lv.pt() > off_el_lead.lv.pt())) && (lv.pt() > leadPtThresh_e) ) {
       off_el_subl_idx = off_el_lead_idx;
       off_el_subl.lv = off_el_lead.lv;
       off_el_lead_idx = (int)elsIndex;
       off_el_lead.lv = lv;
-    } else if ( (off_el_subl_idx == -1) || (lv.pt() > off_el_subl.lv.pt()) ) {
+    } else if ( ((off_el_subl_idx == -1) || (lv.pt() > off_el_subl.lv.pt())) && (lv.pt() > sublPtThresh_e)) {
       // check dR to remove exact duplicates
       if (ROOT::Math::VectorUtil::DeltaR(off_el_lead.lv,lv) > 0.001) {
 	off_el_subl_idx = (int)elsIndex;
@@ -736,6 +790,10 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     }
 
   } // loop on reco gsf electrons
+
+  if (verbose_ && (isem || isme) && (off_el_lead_idx < 0)) {
+    cout << "DilepTrigAnalyzerRECO::analyzeTrigger: no good reco electrons: N(gsfele) =  " << elsHandle_->size() << std::endl;
+  }
 
   //-------------------------------------
   //   reco muons 
@@ -804,6 +862,8 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
   for ( MuonCollection::const_iterator muon = musHandle_->begin(); muon != muons_end; ++muon, ++muonIndex ) {
     LorentzVector lv(muon->p4());
 
+    if (verbose_) cout << " - reco muon: pt: " << lv.pt() << ", eta: " << lv.eta() << ", phi: " << lv.phi(); 
+
     bool duplicate = false;
     // check if this muon is already flagged as a duplicate
     for ( MuonCollection::const_iterator muon2 = muons_dup.begin(); muon2 != muons_dup.end(); ++muon2 ) {
@@ -813,21 +873,33 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	break;
       }
     } // loop on found duplicates
-    if (duplicate) continue;
+    if (duplicate) {
+      if (verbose_) cout << ", DUPLICATE" << std::endl;
+      continue;
+    }
+
+    // min pt cut
+    if (muon->pt() < sublPtThresh_m) {
+      if (verbose_) cout << ", FAILS pt" << std::endl;
+      continue;
+    }
 
     // require match to trigger objects
     bool match = false;
     if ( (hlt_mu_lead_idx >= 0) && (ROOT::Math::VectorUtil::DeltaR(lv,hlt_mu_lead.lv) < dr_trigmatch) ) match = true;
     else if ( (hlt_mu_subl_idx >= 0) && (ROOT::Math::VectorUtil::DeltaR(lv,hlt_mu_subl.lv) < dr_trigmatch) ) match = true;
     else if ( (hlt_mu_third_idx >= 0) && (ROOT::Math::VectorUtil::DeltaR(lv,hlt_mu_third.lv) < dr_trigmatch) ) match = true;
-    if (!match) continue;
+    if (!match && reqTrigMatch_) {
+      if (verbose_) cout << ", FAILS trig match" << std::endl;
+      continue;
+    }
 
     // basic dz cut to remove muons from large z
     bool pass_dz = bool(fabs(muon->muonBestTrack()->dz(firstGoodVertex->position())) < 0.5);
-    if (!pass_dz) continue;
-
-    // min pt cut
-    if (muon->pt() < offSublPt_) continue;
+    if (!pass_dz) {
+      if (verbose_) cout << ", FAILS dz" << std::endl;
+      continue;
+    }
 
     // check tight muon ID, to break ambiguity
     bool pass_tight_1 = muon::isTightMuon(*muon,*firstGoodVertex);
@@ -863,7 +935,12 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	}
       } // if dR < 0.1 
     } // loop over mu2
-    if (duplicate) continue;
+    if (duplicate) {
+      if (verbose_) cout << ", DUPLICATE" << std::endl;
+      continue;
+    }
+
+    if (verbose_) cout << ", passes presel cuts" << std::endl;
 
     muons_good.push_back(*muon);
 
@@ -906,7 +983,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     bool pass_dxy = bool(fabs(dxy) < 0.02);
 
     // pt ordering
-    if ( ((off_mu_lead_idx == -1) || (lv.pt() > off_mu_lead.lv.pt())) && (lv.pt() > offLeadPt_) ) {
+    if ( ((off_mu_lead_idx == -1) || (lv.pt() > off_mu_lead.lv.pt())) && (lv.pt() > leadPtThresh_m) ) {
       if (off_mu_lead_idx != -1) {
 	off_mu_subl_idx = off_mu_lead_idx;
 	off_mu_subl = off_mu_lead;
@@ -918,7 +995,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
       off_mu_lead.pfiso = pfiso;
       off_mu_lead.vz = muon->vz();
       off_mu_lead.charge = muon->charge();
-    } else if ( ((off_mu_subl_idx == -1) || (lv.pt() > off_mu_subl.lv.pt())) && (lv.pt() > offSublPt_) ) {
+    } else if ( ((off_mu_subl_idx == -1) || (lv.pt() > off_mu_subl.lv.pt())) && (lv.pt() > sublPtThresh_m) ) {
       off_mu_subl_idx = (int)muonIndex;
       off_mu_subl.lv = lv;
       off_mu_subl.trkiso = trkiso;
@@ -929,7 +1006,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 
     if (pass_tight) {
       // pt ordering
-      if ( (((off_mu_tight_lead_idx == -1) || (lv.pt() > off_mu_tight_lead.lv.pt())))  && (lv.pt() > offLeadPt_) ) {
+      if ( (((off_mu_tight_lead_idx == -1) || (lv.pt() > off_mu_tight_lead.lv.pt())))  && (lv.pt() > leadPtThresh_m) ) {
 	if (off_mu_tight_lead_idx != -1) {
 	  off_mu_tight_subl_idx = off_mu_tight_lead_idx;
 	  off_mu_tight_subl = off_mu_tight_lead;
@@ -941,7 +1018,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	off_mu_tight_lead.pfiso = pfiso;
 	off_mu_tight_lead.vz = muon->vz();
 	off_mu_tight_lead.charge = muon->charge();
-      } else if ( ((off_mu_tight_subl_idx == -1) || (lv.pt() > off_mu_tight_subl.lv.pt()))  && (lv.pt() > offSublPt_) ) {
+      } else if ( ((off_mu_tight_subl_idx == -1) || (lv.pt() > off_mu_tight_subl.lv.pt()))  && (lv.pt() > sublPtThresh_m) ) {
 	off_mu_tight_subl_idx = (int)muonIndex;
 	off_mu_tight_subl.lv = lv;
 	off_mu_tight_subl.trkiso = trkiso;
@@ -954,7 +1031,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     //    if (pass_tight && pass_trkiso_trig) {
     if (pass_loose && pass_trkiso_trig) {
       // pt ordering
-      if ( ((off_mu_trigiso_lead_idx == -1) || (lv.pt() > off_mu_trigiso_lead.lv.pt()))  && (lv.pt() > offLeadPt_)) {
+      if ( ((off_mu_trigiso_lead_idx == -1) || (lv.pt() > off_mu_trigiso_lead.lv.pt()))  && (lv.pt() > leadPtThresh_m)) {
 	if (off_mu_trigiso_lead_idx != -1) {
 	  off_mu_trigiso_subl_idx = off_mu_trigiso_lead_idx;
 	  off_mu_trigiso_subl = off_mu_trigiso_lead;
@@ -966,7 +1043,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	off_mu_trigiso_lead.pfiso = pfiso;
 	off_mu_trigiso_lead.vz = muon->vz();
         off_mu_trigiso_lead.charge = muon->charge();
-      } else if ( ((off_mu_trigiso_subl_idx == -1) || (lv.pt() > off_mu_trigiso_subl.lv.pt()))  && (lv.pt() > offSublPt_)) {
+      } else if ( ((off_mu_trigiso_subl_idx == -1) || (lv.pt() > off_mu_trigiso_subl.lv.pt()))  && (lv.pt() > sublPtThresh_m)) {
 	off_mu_trigiso_subl_idx = (int)muonIndex;
 	off_mu_trigiso_subl.lv = lv;
 	off_mu_trigiso_subl.trkiso = trkiso;
@@ -978,7 +1055,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 
     if (pass_loose && pass_ip3d && pass_iso_loose) {
       // pt ordering
-      if ( ((off_mu_liso_lead_idx == -1) || (lv.pt() > off_mu_liso_lead.lv.pt()))  && (lv.pt() > offLeadPt_)) {
+      if ( ((off_mu_liso_lead_idx == -1) || (lv.pt() > off_mu_liso_lead.lv.pt()))  && (lv.pt() > leadPtThresh_m)) {
 	if (off_mu_liso_lead_idx != -1) {
 	  off_mu_liso_subl_idx = off_mu_liso_lead_idx;
 	  off_mu_liso_subl = off_mu_liso_lead;
@@ -990,7 +1067,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	off_mu_liso_lead.pfiso = pfiso;
 	off_mu_liso_lead.vz = muon->vz();
         off_mu_liso_lead.charge = muon->charge();
-      } else if ( ((off_mu_liso_subl_idx == -1) || (lv.pt() > off_mu_liso_subl.lv.pt()))  && (lv.pt() > offSublPt_)) {
+      } else if ( ((off_mu_liso_subl_idx == -1) || (lv.pt() > off_mu_liso_subl.lv.pt()))  && (lv.pt() > sublPtThresh_m)) {
 	off_mu_liso_subl_idx = (int)muonIndex;
 	off_mu_liso_subl.lv = lv;
 	off_mu_liso_subl.trkiso = trkiso;
@@ -1002,7 +1079,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 
     if (pass_tight && pass_iso_loose) {
       // pt ordering
-      if ( ((off_mu_tliso_lead_idx == -1) || (lv.pt() > off_mu_tliso_lead.lv.pt()))  && (lv.pt() > offLeadPt_)) {
+      if ( ((off_mu_tliso_lead_idx == -1) || (lv.pt() > off_mu_tliso_lead.lv.pt()))  && (lv.pt() > leadPtThresh_m)) {
 	if (off_mu_tliso_lead_idx != -1) {
 	  off_mu_tliso_subl_idx = off_mu_tliso_lead_idx;
 	  off_mu_tliso_subl = off_mu_tliso_lead;
@@ -1014,7 +1091,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	off_mu_tliso_lead.pfiso = pfiso;
 	off_mu_tliso_lead.vz = muon->vz();
         off_mu_tliso_lead.charge = muon->charge();
-      } else if ( ((off_mu_tliso_subl_idx == -1) || (lv.pt() > off_mu_tliso_subl.lv.pt()))  && (lv.pt() > offSublPt_)) {
+      } else if ( ((off_mu_tliso_subl_idx == -1) || (lv.pt() > off_mu_tliso_subl.lv.pt()))  && (lv.pt() > sublPtThresh_m)) {
 	off_mu_tliso_subl_idx = (int)muonIndex;
 	off_mu_tliso_subl.lv = lv;
 	off_mu_tliso_subl.trkiso = trkiso;
@@ -1026,7 +1103,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 
     if (pass_tight && pass_iso_tight && pass_dxy) {
       // pt ordering
-      if ( ((off_mu_tiso_lead_idx == -1) || (lv.pt() > off_mu_tiso_lead.lv.pt()))  && (lv.pt() > offLeadPt_)) {
+      if ( ((off_mu_tiso_lead_idx == -1) || (lv.pt() > off_mu_tiso_lead.lv.pt()))  && (lv.pt() > leadPtThresh_m)) {
 	if (off_mu_tiso_lead_idx != -1) {
 	  off_mu_tiso_subl_idx = off_mu_tiso_lead_idx;
 	  off_mu_tiso_subl = off_mu_tiso_lead;
@@ -1038,7 +1115,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	off_mu_tiso_lead.pfiso = pfiso;
 	off_mu_tiso_lead.vz = muon->vz();
         off_mu_tiso_lead.charge = muon->charge();
-      } else if ( ((off_mu_tiso_subl_idx == -1) || (lv.pt() > off_mu_tiso_subl.lv.pt()))  && (lv.pt() > offSublPt_)) {
+      } else if ( ((off_mu_tiso_subl_idx == -1) || (lv.pt() > off_mu_tiso_subl.lv.pt()))  && (lv.pt() > sublPtThresh_m)) {
 	off_mu_tiso_subl_idx = (int)muonIndex;
 	off_mu_tiso_subl.lv = lv;
 	off_mu_tiso_subl.trkiso = trkiso;
@@ -1050,6 +1127,10 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 
   } // loop on duplicate-cleaned muons
 
+  if (verbose_ && (isem || isme) && (off_mu_lead_idx < 0)) {
+    cout << "DilepTrigAnalyzerRECO::analyzeTrigger: no good reco muons: N(mu) =  " << musHandle_->size() 
+	 << ", good muons: " << muons_good.size() << std::endl;
+  }
 
   //-------------------------------------
   //   reco lepton plots
@@ -1079,65 +1160,83 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
   } // ismm
 
   else if (isem) {
+    // no offline sel
     fillHists(off_el_lead,off_mu_lead,triggerShort,false);
     fillHistsRecoHLT(off_el_lead,off_mu_lead,hlt_el_lead,hlt_mu_lead,triggerShort);
-    if (off_mu_tight_lead_idx >= 0) {
-      fillHists(off_el_lead,off_mu_tight_lead,triggerShort+"_tight",false);
-      fillHistsRecoHLT(off_el_lead,off_mu_tight_lead,hlt_el_lead,hlt_mu_lead,triggerShort+"_tight");
-    }
-    if (off_mu_trigiso_lead_idx >= 0) {
-      fillHists(off_el_lead,off_mu_trigiso_lead,triggerShort+"_trigiso",false);
-      fillHistsRecoHLT(off_el_lead,off_mu_trigiso_lead,hlt_el_lead,hlt_mu_lead,triggerShort+"_trigiso");
-    }
-    if (off_mu_tiso_lead_idx >= 0) {
-      fillHists(off_el_lead,off_mu_tiso_lead,triggerShort+"_tiso",false);
-      fillHistsRecoHLT(off_el_lead,off_mu_tiso_lead,hlt_el_lead,hlt_mu_lead,triggerShort+"_tiso");
-    }
+    // offline tight
+    fillHists(off_el_lead,off_mu_tight_lead,triggerShort+"_tight",false);
+    fillHistsRecoHLT(off_el_lead,off_mu_tight_lead,hlt_el_lead,hlt_mu_lead,triggerShort+"_tight");
+    // offline trigiso
+    fillHists(off_el_lead,off_mu_trigiso_lead,triggerShort+"_trigiso",false);
+    fillHistsRecoHLT(off_el_lead,off_mu_trigiso_lead,hlt_el_lead,hlt_mu_lead,triggerShort+"_trigiso");
+    // offline liso (ZZ sel)
+    fillHists(off_el_lead,off_mu_liso_lead,triggerShort+"_liso",false);
+    fillHistsRecoHLT(off_el_lead,off_mu_liso_lead,hlt_el_lead,hlt_mu_lead,triggerShort+"_liso");
+    // offline tliso (denom sel)
+    fillHists(off_el_lead,off_mu_tliso_lead,triggerShort+"_tliso",false);
+    fillHistsRecoHLT(off_el_lead,off_mu_tliso_lead,hlt_el_lead,hlt_mu_lead,triggerShort+"_tliso");
+    // offline tiso (signal sel)
+    fillHists(off_el_lead,off_mu_tiso_lead,triggerShort+"_tiso",false);
+    fillHistsRecoHLT(off_el_lead,off_mu_tiso_lead,hlt_el_lead,hlt_mu_lead,triggerShort+"_tiso");
   } // isem
 
   else if (isme) {
+    // no offline sel
     fillHists(off_mu_lead,off_el_lead,triggerShort,false);
     fillHistsRecoHLT(off_mu_lead,off_el_lead,hlt_mu_lead,hlt_el_lead,triggerShort);
-    if (off_mu_tight_lead_idx >= 0) {
-      fillHists(off_mu_tight_lead,off_el_lead,triggerShort+"_tight",false);
-      fillHistsRecoHLT(off_mu_tight_lead,off_el_lead,hlt_mu_lead,hlt_el_lead,triggerShort+"_tight");
-    }
-    if (off_mu_trigiso_lead_idx >= 0) {
-      fillHists(off_mu_trigiso_lead,off_el_lead,triggerShort+"_trigiso",false);
-      fillHistsRecoHLT(off_mu_trigiso_lead,off_el_lead,hlt_mu_lead,hlt_el_lead,triggerShort+"_trigiso");
-    }
-    if (off_mu_tiso_lead_idx >= 0) {
-      fillHists(off_mu_tiso_lead,off_el_lead,triggerShort+"_tiso",false);
-      fillHistsRecoHLT(off_mu_tiso_lead,off_el_lead,hlt_mu_lead,hlt_el_lead,triggerShort+"_tiso");
-    }
+    // offline tight
+    fillHists(off_mu_tight_lead,off_el_lead,triggerShort+"_tight",false);
+    fillHistsRecoHLT(off_mu_tight_lead,off_el_lead,hlt_mu_lead,hlt_el_lead,triggerShort+"_tight");
+    // offline trigiso
+    fillHists(off_mu_trigiso_lead,off_el_lead,triggerShort+"_trigiso",false);
+    fillHistsRecoHLT(off_mu_trigiso_lead,off_el_lead,hlt_mu_lead,hlt_el_lead,triggerShort+"_trigiso");
+    // offline liso (signal sel)
+    fillHists(off_mu_liso_lead,off_el_lead,triggerShort+"_liso",false);
+    fillHistsRecoHLT(off_mu_liso_lead,off_el_lead,hlt_mu_lead,hlt_el_lead,triggerShort+"_liso");
+    // offline tliso (denom sel)
+    fillHists(off_mu_tliso_lead,off_el_lead,triggerShort+"_tliso",false);
+    fillHistsRecoHLT(off_mu_tliso_lead,off_el_lead,hlt_mu_lead,hlt_el_lead,triggerShort+"_tliso");
+    // offline tiso (signal sel)
+    fillHists(off_mu_tiso_lead,off_el_lead,triggerShort+"_tiso",false);
+    fillHistsRecoHLT(off_mu_tiso_lead,off_el_lead,hlt_mu_lead,hlt_el_lead,triggerShort+"_tiso");
   } // isme
 
 
   // printout for cases where trigger is inefficient
   //  if ( verbose_ && ismm && (off_mu_trigiso_lead_idx >= 0) && (off_mu_trigiso_subl_idx >= 0) ) {
-  if ( verbose_ && (triggerEnum == mm) && (off_mu_trigiso_lead_idx >= 0) && (off_mu_trigiso_subl_idx >= 0) ) {
+  //  if ( verbose_ && (triggerEnum == mm) && (off_mu_trigiso_lead_idx >= 0) && (off_mu_trigiso_subl_idx >= 0) ) {
+  if ( verbose_ && (triggerEnum == em) && (off_mu_tliso_lead_idx >= 0) && (off_el_lead_idx >= 0) ) {
     // check that this is the noniso trigger, and that the iso trigger failed
-    LorentzVector dilep = off_mu_trigiso_lead.lv + off_mu_trigiso_subl.lv;
-    float deltaR = ROOT::Math::VectorUtil::DeltaR(off_mu_trigiso_lead.lv,off_mu_trigiso_subl.lv);
+    // LorentzVector dilep = off_mu_trigiso_lead.lv + off_mu_trigiso_subl.lv;
+    // float deltaR = ROOT::Math::VectorUtil::DeltaR(off_mu_trigiso_lead.lv,off_mu_trigiso_subl.lv);
+    LorentzVector dilep = off_mu_tliso_lead.lv + off_el_lead.lv;
+    float deltaR = ROOT::Math::VectorUtil::DeltaR(off_mu_tliso_lead.lv,off_el_lead.lv);
     bool ineff = false;
-    if ( (isoTriggerEnum != notrig) && ((trigpass_results_ & (1 << isoTriggerEnum)) == 0) ) {
+    //    if ( (isoTriggerEnum != notrig) && ((trigpass_results_ & (1 << isoTriggerEnum)) == 0) ) {
+    if ( (isoTriggerEnum != notrig) && ((trigpass_results_ & (1 << (isoTriggerEnum - (unsigned int)emi) )) == 0) ) {
       cout << "-- HLT inefficiency, event level! Non-iso trigger: " << triggerName;
       ineff = true;
     }
-    else if ( (isoTriggerEnum != notrig) && ((trigpass_results_offdilep_ & (1 << isoTriggerEnum)) == 0) ) {
-      cout << "++ HLT inefficiency, offline object level! Non-iso trigger: " << triggerName;
-      ineff = true;
-    }
+    // else if ( (isoTriggerEnum != notrig) && ((trigpass_results_offdilep_ & (1 << isoTriggerEnum)) == 0) ) {
+    //   cout << "++ HLT inefficiency, offline object level! Non-iso trigger: " << triggerName;
+    //   ineff = true;
+    // }
     if (ineff) {
+      // cout << ", run: " << iEvent.id().run()
+      // 	   << ", event: " << iEvent.id().event() << ", mass: " << dilep.M() << ", deltaR: " << deltaR << endl
+      // 	   << "     hlt mu1 pt: " << hlt_mu_lead.lv.pt() << ", iso: " << hlt_mu_lead.trkiso
+      // 	   << ", hlt mu2 pt: " << hlt_mu_subl.lv.pt() << ", iso: " << hlt_mu_subl.trkiso << endl
+      // 	   << "     off mu1 pt: " << off_mu_trigiso_lead.lv.pt() << ", iso: " << off_mu_trigiso_lead.trkiso
+      // 	   << ", off mu2 pt: " << off_mu_trigiso_subl.lv.pt() << ", iso: " << off_mu_trigiso_subl.trkiso << endl;
       cout << ", run: " << iEvent.id().run()
 	   << ", event: " << iEvent.id().event() << ", mass: " << dilep.M() << ", deltaR: " << deltaR << endl
-	   << "     hlt mu1 pt: " << hlt_mu_lead.lv.pt() << ", iso: " << hlt_mu_lead.trkiso
-	   << ", hlt mu2 pt: " << hlt_mu_subl.lv.pt() << ", iso: " << hlt_mu_subl.trkiso << endl
-	   << "     off mu1 pt: " << off_mu_trigiso_lead.lv.pt() << ", iso: " << off_mu_trigiso_lead.trkiso
-	   << ", off mu2 pt: " << off_mu_trigiso_subl.lv.pt() << ", iso: " << off_mu_trigiso_subl.trkiso << endl;
+	   << "     hlt mu pt: " << hlt_mu_lead.lv.pt() << ", iso: " << hlt_mu_lead.trkiso
+	   << ", hlt el pt: " << hlt_el_lead.lv.pt()  << endl
+	   << "     off mu pt: " << off_mu_tliso_lead.lv.pt() << ", iso: " << off_mu_tliso_lead.trkiso
+	   << ", off el pt: " << off_el_lead.lv.pt() << endl;
       // loop over pf cands near the hlt muons and print them out..
       if (dumpHLTPFCands_) {
-	edm::Handle<reco::PFCandidateCollection> hltPFCandsHandle = hltPFCandsGlbHandle_;
+	// edm::Handle<reco::PFCandidateCollection> hltPFCandsHandle = hltPFCandsGlbHandle_;
 	edm::Handle<reco::TrackCollection> hltTracksHandle = hltTracksGlbHandle_;
 	// if (triggerEnum == mm) hltPFCandsHandle = hltPFCandsGlbHandle_;
 	// else hltPFCandsHandle = hltPFCandsTrkHandle_;
@@ -1153,38 +1252,38 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,hlt_trk_ref->momentum()) < 0.3) {
 	    hlt_trks_lead.push_back(hlt_trk_ref);
 	  }
-	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,hlt_trk_ref->momentum()) < 0.3) {
-	    hlt_trks_subl.push_back(hlt_trk_ref);
-	  }
+	  // if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,hlt_trk_ref->momentum()) < 0.3) {
+	  //   hlt_trks_subl.push_back(hlt_trk_ref);
+	  // }
 	} // loop on hlt tracks
 
 	// find hlt pf cands near hlt muons
-        PFCandidateCollection::const_iterator hlt_pfcands_end = hltPFCandsHandle->end();  // Iterator
-	PFCandidateCollection hlt_pfcands_lead;
-	PFCandidateCollection hlt_pfcands_subl;
-	for ( PFCandidateCollection::const_iterator hlt_pfcand = hltPFCandsHandle->begin(); hlt_pfcand != hlt_pfcands_end; ++hlt_pfcand ) {
-	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,hlt_pfcand->p4()) < 0.3) {
-	    hlt_pfcands_lead.push_back(*hlt_pfcand);
-	  }
-	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,hlt_pfcand->p4()) < 0.3) {
-	    hlt_pfcands_subl.push_back(*hlt_pfcand);
-	  }
-	} // loop on hlt pf cands
-
-	// // find off pf cands near hlt muons
-        // PFCandidateCollection::const_iterator off_pfcands_end = offPFCandsHandle_->end();  // Iterator
-	// PFCandidateCollection off_pfcands_lead;
-	// PFCandidateCollection off_pfcands_subl;
-	// for ( PFCandidateCollection::const_iterator off_pfcand = offPFCandsHandle_->begin(); off_pfcand != off_pfcands_end; ++off_pfcand ) {
-	//   if (abs(off_pfcand->charge()) != 1) continue;
-
-	//   if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,off_pfcand->p4()) < 0.3) {
-	//     off_pfcands_lead.push_back(*off_pfcand);
+        // PFCandidateCollection::const_iterator hlt_pfcands_end = hltPFCandsHandle->end();  // Iterator
+	// PFCandidateCollection hlt_pfcands_lead;
+	// PFCandidateCollection hlt_pfcands_subl;
+	// for ( PFCandidateCollection::const_iterator hlt_pfcand = hltPFCandsHandle->begin(); hlt_pfcand != hlt_pfcands_end; ++hlt_pfcand ) {
+	//   if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,hlt_pfcand->p4()) < 0.3) {
+	//     hlt_pfcands_lead.push_back(*hlt_pfcand);
 	//   }
-	//   if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,off_pfcand->p4()) < 0.3) {
-	//     off_pfcands_subl.push_back(*off_pfcand);
-	//   }
-	// } // loop on off pf cands
+	//   // if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,hlt_pfcand->p4()) < 0.3) {
+	//   //   hlt_pfcands_subl.push_back(*hlt_pfcand);
+	//   // }
+	// } // loop on hlt pf cands
+
+	// find off pf cands near hlt muons
+        PFCandidateCollection::const_iterator off_pfcands_end = offPFCandsHandle_->end();  // Iterator
+	PFCandidateCollection off_pfcands_lead;
+	PFCandidateCollection off_pfcands_subl;
+	for ( PFCandidateCollection::const_iterator off_pfcand = offPFCandsHandle_->begin(); off_pfcand != off_pfcands_end; ++off_pfcand ) {
+	  if (abs(off_pfcand->charge()) != 1) continue;
+
+	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,off_pfcand->p4()) < 0.3) {
+	    off_pfcands_lead.push_back(*off_pfcand);
+	  }
+	  // if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,off_pfcand->p4()) < 0.3) {
+	  //   off_pfcands_subl.push_back(*off_pfcand);
+	  // }
+	} // loop on off pf cands
 
 	// dump hlt pf cands near lead hlt muon
 	cout << "   ---- hlt tracks near leading hlt muon:" << endl;
@@ -1203,82 +1302,83 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	}
 
 	// dump hlt pf cands near lead hlt muon
-	cout << "   ++++ hlt pf cands near leading hlt muon:" << endl;
-        PFCandidateCollection::const_iterator hlt_pfcands_lead_end = hlt_pfcands_lead.end();  // Iterator
-	for ( PFCandidateCollection::const_iterator hlt_pfcand = hlt_pfcands_lead.begin(); hlt_pfcand != hlt_pfcands_lead_end; ++hlt_pfcand ) {
-	  float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,hlt_pfcand->p4());
-	  int vtx = chargedHadronVertex(*hltVertexCollection,*hlt_pfcand);
-	  float dz = hlt_mu_lead.vz - hlt_pfcand->vz();
-	  //	  if (fabs(dz) > 1.0) continue;
-	  if (fabs(dz) < 0.2) cout << "    * ";
-	  else cout << "      ";
-	  cout << "pt: " << hlt_pfcand->pt() << ", eta: " << hlt_pfcand->eta() << ", phi: " << hlt_pfcand->phi()
-	       << ", id: " << hlt_pfcand->particleId() << ", vz: " << hlt_pfcand->vz() << ", vtx: " << vtx
-	       << ", nhits: " << hlt_pfcand->trackRef()->numberOfValidHits() << ", algo: " << hlt_pfcand->trackRef()->algo() 
-	       << ", dR: " << dR << endl;
-	}
-
-	// // dump off pf cands near lead hlt muon
-	// cout << "   ++++ off pf cands near leading hlt muon:" << endl;
-        // PFCandidateCollection::const_iterator off_pfcands_lead_end = off_pfcands_lead.end();  // Iterator
-	// for ( PFCandidateCollection::const_iterator off_pfcand = off_pfcands_lead.begin(); off_pfcand != off_pfcands_lead_end; ++off_pfcand ) {
-	//   float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,off_pfcand->p4());
-	//   int vtx = chargedHadronVertex(*vertexCollection,*off_pfcand);
-	//   float dz = hlt_mu_lead.vz - off_pfcand->vz();
-	//   if (fabs(dz) > 1.0) continue;
-	//   if (((vtx == 0) || (vtx == -1)) && (off_pfcand->particleId() == 1)) cout << "    * ";
+	// cout << "   ++++ hlt pf cands near leading hlt muon:" << endl;
+        // PFCandidateCollection::const_iterator hlt_pfcands_lead_end = hlt_pfcands_lead.end();  // Iterator
+	// for ( PFCandidateCollection::const_iterator hlt_pfcand = hlt_pfcands_lead.begin(); hlt_pfcand != hlt_pfcands_lead_end; ++hlt_pfcand ) {
+	//   float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,hlt_pfcand->p4());
+	//   int vtx = chargedHadronVertex(*hltVertexCollection,*hlt_pfcand);
+	//   float dz = hlt_mu_lead.vz - hlt_pfcand->vz();
+	//   //	  if (fabs(dz) > 1.0) continue;
+	//   if (fabs(dz) < 0.2) cout << "    * ";
 	//   else cout << "      ";
-	//   cout << "pt: " << off_pfcand->pt() << ", eta: " << off_pfcand->eta() << ", phi: " << off_pfcand->phi()
-	//        << ", id: " << off_pfcand->particleId() << ", vz: " << off_pfcand->vz() << ", vtx: " << vtx
-	//        << ", nhits: " << off_pfcand->trackRef()->numberOfValidHits() << ", dR: " << dR << endl;
+	//   cout << "pt: " << hlt_pfcand->pt() << ", eta: " << hlt_pfcand->eta() << ", phi: " << hlt_pfcand->phi()
+	//        << ", id: " << hlt_pfcand->particleId() << ", vz: " << hlt_pfcand->vz() << ", vtx: " << vtx
+	//        << ", nhits: " << hlt_pfcand->trackRef()->numberOfValidHits() << ", algo: " << hlt_pfcand->trackRef()->algo() 
+	//        << ", dR: " << dR << endl;
 	// }
 
-	// dump hlt pf cands near subl hlt muon
-	cout << "   ---- hlt tracks near subleading hlt muon:" << endl;
-        std::vector<reco::TrackRef>::const_iterator hlt_trks_subl_end = hlt_trks_subl.end();  // Iterator
-	for ( std::vector<reco::TrackRef>::const_iterator hlt_trk = hlt_trks_subl.begin(); hlt_trk != hlt_trks_subl_end; ++hlt_trk ) {
-	  float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,(**hlt_trk).momentum());
-	  int vtx = trackVertex(*hltVertexCollection,*hlt_trk);
-	  float dz = hlt_mu_subl.vz - (**hlt_trk).vz();
-	  //	  if (fabs(dz) > 1.0) continue;
-	  if ((fabs(dz) < 0.2) && (dR > 0.01)) cout << "    * ";
+	// dump off pf cands near lead hlt muon
+	cout << "   ++++ off pf cands near leading hlt muon:" << endl;
+        PFCandidateCollection::const_iterator off_pfcands_lead_end = off_pfcands_lead.end();  // Iterator
+	for ( PFCandidateCollection::const_iterator off_pfcand = off_pfcands_lead.begin(); off_pfcand != off_pfcands_lead_end; ++off_pfcand ) {
+	  float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,off_pfcand->p4());
+	  int vtx = chargedHadronVertex(*vertexCollection,*off_pfcand);
+	  float dz = hlt_mu_lead.vz - off_pfcand->vz();
+	  if (fabs(dz) > 1.0) continue;
+	  if (((vtx == 0) || (vtx == -1)) && (off_pfcand->particleId() == 1)) cout << "    * ";
 	  else cout << "      ";
-	  cout << "pt: " << (**hlt_trk).pt() << ", eta: " << (**hlt_trk).eta() << ", phi: " << (**hlt_trk).phi()
-	       << ", vz: " << (**hlt_trk).vz() << ", vtx: " << vtx
-	       << ", nhits: " << (**hlt_trk).numberOfValidHits() << ", algo: " << (**hlt_trk).algo() 
+	  cout << "pt: " << off_pfcand->pt() << ", eta: " << off_pfcand->eta() << ", phi: " << off_pfcand->phi()
+	       << ", id: " << off_pfcand->particleId() << ", vz: " << off_pfcand->vz() << ", vtx: " << vtx
 	       << ", dR: " << dR << endl;
+	  //	       << ", nhits: " << off_pfcand->trackRef()->numberOfValidHits() << ", dR: " << dR << endl;
 	}
 
-	// dump hlt pf cands near subl hlt muon
-	cout << "   ++++ hlt pf cands near subleading hlt muon:" << endl;
-        PFCandidateCollection::const_iterator hlt_pfcands_subl_end = hlt_pfcands_subl.end();  // Iterator
-	for ( PFCandidateCollection::const_iterator hlt_pfcand = hlt_pfcands_subl.begin(); hlt_pfcand != hlt_pfcands_subl_end; ++hlt_pfcand ) {
-	  float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,hlt_pfcand->p4());
-	  int vtx = chargedHadronVertex(*hltVertexCollection,*hlt_pfcand);
-	  float dz = hlt_mu_lead.vz - hlt_pfcand->vz();
-	  //if (fabs(dz) > 1.0) continue;
-	  if (fabs(dz) < 0.2) cout << "    * ";
-	  else cout << "      ";
-	  cout << "pt: " << hlt_pfcand->pt() << ", eta: " << hlt_pfcand->eta() << ", phi: " << hlt_pfcand->phi()
-	       << ", id: " << hlt_pfcand->particleId() << ", vz: " << hlt_pfcand->vz() << ", vtx: " << vtx
-	       << ", nhits: " << hlt_pfcand->trackRef()->numberOfValidHits() << ", algo: " << hlt_pfcand->trackRef()->algo() 
-	       << ", dR: " << dR << endl;
-	}
+	//   // dump hlt pf cands near subl hlt muon
+	//   cout << "   ---- hlt tracks near subleading hlt muon:" << endl;
+	//   std::vector<reco::TrackRef>::const_iterator hlt_trks_subl_end = hlt_trks_subl.end();  // Iterator
+	//   for ( std::vector<reco::TrackRef>::const_iterator hlt_trk = hlt_trks_subl.begin(); hlt_trk != hlt_trks_subl_end; ++hlt_trk ) {
+	//     float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,(**hlt_trk).momentum());
+	//     int vtx = trackVertex(*hltVertexCollection,*hlt_trk);
+	//     float dz = hlt_mu_subl.vz - (**hlt_trk).vz();
+	//     //	  if (fabs(dz) > 1.0) continue;
+	//     if ((fabs(dz) < 0.2) && (dR > 0.01)) cout << "    * ";
+	//     else cout << "      ";
+	//     cout << "pt: " << (**hlt_trk).pt() << ", eta: " << (**hlt_trk).eta() << ", phi: " << (**hlt_trk).phi()
+	// 	 << ", vz: " << (**hlt_trk).vz() << ", vtx: " << vtx
+	// 	 << ", nhits: " << (**hlt_trk).numberOfValidHits() << ", algo: " << (**hlt_trk).algo() 
+	// 	 << ", dR: " << dR << endl;
+	//   }
 
-	// // dump off pf cands near subl hlt muon
-	// cout << "   ++++ off pf cands near subleading hlt muon:" << endl;
-        // PFCandidateCollection::const_iterator off_pfcands_subl_end = off_pfcands_subl.end();  // Iterator
-	// for ( PFCandidateCollection::const_iterator off_pfcand = off_pfcands_subl.begin(); off_pfcand != off_pfcands_subl_end; ++off_pfcand ) {
-	//   float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,off_pfcand->p4());
-	//   int vtx = chargedHadronVertex(*vertexCollection,*off_pfcand);
-	//   float dz = hlt_mu_lead.vz - off_pfcand->vz();
-	//   if (fabs(dz) > 1.0) continue;
-	//   if (((vtx == 0) || (vtx == -1)) && (off_pfcand->particleId() == 1)) cout << "    * ";
-	//   else cout << "      ";
-	//   cout << "pt: " << off_pfcand->pt() << ", eta: " << off_pfcand->eta() << ", phi: " << off_pfcand->phi()
-	//        << ", id: " << off_pfcand->particleId() << ", vz: " << off_pfcand->vz() << ", vtx: " << vtx
-	//        << ", nhits: " << off_pfcand->trackRef()->numberOfValidHits() << ", dR: " << dR << endl;
-	// }
+	//   // dump hlt pf cands near subl hlt muon
+	//   cout << "   ++++ hlt pf cands near subleading hlt muon:" << endl;
+	//   PFCandidateCollection::const_iterator hlt_pfcands_subl_end = hlt_pfcands_subl.end();  // Iterator
+	//   for ( PFCandidateCollection::const_iterator hlt_pfcand = hlt_pfcands_subl.begin(); hlt_pfcand != hlt_pfcands_subl_end; ++hlt_pfcand ) {
+	//     float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,hlt_pfcand->p4());
+	//     int vtx = chargedHadronVertex(*hltVertexCollection,*hlt_pfcand);
+	//     float dz = hlt_mu_lead.vz - hlt_pfcand->vz();
+	//     //if (fabs(dz) > 1.0) continue;
+	//     if (fabs(dz) < 0.2) cout << "    * ";
+	//     else cout << "      ";
+	//     cout << "pt: " << hlt_pfcand->pt() << ", eta: " << hlt_pfcand->eta() << ", phi: " << hlt_pfcand->phi()
+	// 	 << ", id: " << hlt_pfcand->particleId() << ", vz: " << hlt_pfcand->vz() << ", vtx: " << vtx
+	// 	 << ", nhits: " << hlt_pfcand->trackRef()->numberOfValidHits() << ", algo: " << hlt_pfcand->trackRef()->algo() 
+	// 	 << ", dR: " << dR << endl;
+
+	  // // dump off pf cands near subl hlt muon
+	  // cout << "   ++++ off pf cands near subleading hlt muon:" << endl;
+	  // PFCandidateCollection::const_iterator off_pfcands_subl_end = off_pfcands_subl.end();  // Iterator
+	  // for ( PFCandidateCollection::const_iterator off_pfcand = off_pfcands_subl.begin(); off_pfcand != off_pfcands_subl_end; ++off_pfcand ) {
+	  //   float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,off_pfcand->p4());
+	  //   int vtx = chargedHadronVertex(*vertexCollection,*off_pfcand);
+	  //   float dz = hlt_mu_lead.vz - off_pfcand->vz();
+	  //   if (fabs(dz) > 1.0) continue;
+	  //   if (((vtx == 0) || (vtx == -1)) && (off_pfcand->particleId() == 1)) cout << "    * ";
+	  //   else cout << "      ";
+	  //   cout << "pt: " << off_pfcand->pt() << ", eta: " << off_pfcand->eta() << ", phi: " << off_pfcand->phi()
+	  //        << ", id: " << off_pfcand->particleId() << ", vz: " << off_pfcand->vz() << ", vtx: " << vtx
+	  //        << ", nhits: " << off_pfcand->trackRef()->numberOfValidHits() << ", dR: " << dR << endl;
+	  // }
+	//	}
 
       } // if dumpHLTPFCands
     } // if ineff
@@ -1312,6 +1412,7 @@ void DilepTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const std:
   }
 
   hists_1d_["h_nlep_off"+suf] = fs->make<TH1F>(Form("h_nlep_off%s",suf.c_str()) , "; Offline N(lep)" , 3 , -0.5 , 2.5 );
+  hists_2d_["h_nelnmu_off"+suf] = fs->make<TH2F>(Form("h_nelnmu_off%s",suf.c_str()) , "; Offline N(ele); Offline N(mu)" , 3 , -0.5 , 2.5, 3 , -0.5 , 2.5 );
 
   hists_1d_["h_lead_pt"+suf] = fs->make<TH1F>(Form("h_lead_pt%s",suf.c_str()) , "; Leading p_{T} [GeV]" , 100 , 0. , 100. );
   hists_1d_["h_subl_pt"+suf] = fs->make<TH1F>(Form("h_subl_pt%s",suf.c_str()) , "; Subleading p_{T} [GeV]" , 100 , 0. , 100. );
@@ -1349,6 +1450,13 @@ void DilepTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const std:
   hists_1d_["h_lead_offhlt_dr"+suf] = fs->make<TH1F>(Form("h_lead_offhlt_dr%s",suf.c_str()) , "; Leading #DeltaR(off,HLT)" , 600 , 0. , 6. );
   hists_1d_["h_subl_offhlt_dr"+suf] = fs->make<TH1F>(Form("h_subl_offhlt_dr%s",suf.c_str()) , "; Subleading #DeltaR(off,HLT)" , 600 , 0. , 6. );
 
+  hists_1d_["h_lead_pt_hltonly"+suf] = fs->make<TH1F>(Form("h_lead_pt_hltonly%s",suf.c_str()) , "; Leading p_{T} [GeV]" , 100 , 0. , 100. );
+  hists_1d_["h_subl_pt_hltonly"+suf] = fs->make<TH1F>(Form("h_subl_pt_hltonly%s",suf.c_str()) , "; Subleading p_{T} [GeV]" , 100 , 0. , 100. );
+  hists_1d_["h_lead_eta_hltonly"+suf] = fs->make<TH1F>(Form("h_lead_eta_hltonly%s",suf.c_str()) , "; Leading #eta" , 100 , -3. , 3. );
+  hists_1d_["h_subl_eta_hltonly"+suf] = fs->make<TH1F>(Form("h_subl_eta_hltonly%s",suf.c_str()) , "; Subleading #eta" , 100 , -3. , 3. );
+  hists_1d_["h_mll_hltonly"+suf] = fs->make<TH1F>(Form("h_mll_hltonly%s",suf.c_str()) , "; M_{ll} [GeV]" , 150 , 0. , 150. );
+  hists_1d_["h_dr_hltonly"+suf] = fs->make<TH1F>(Form("h_dr_hltonly%s",suf.c_str()) , "; #DeltaR" , 600 , 0. , 6. );
+
   hists_2d_["h_lead_abstrkiso_hlt_vs_off"+suf] = fs->make<TH2F>(Form("h_lead_abstrkiso_hlt_vs_off%s",suf.c_str()) , "; Leading offline trkiso [GeV]; Leading HLT trkiso [GeV]" , 50 , 0. , 10. , 50 , 0. , 10. );
   hists_2d_["h_subl_abstrkiso_hlt_vs_off"+suf] = fs->make<TH2F>(Form("h_subl_abstrkiso_hlt_vs_off%s",suf.c_str()) , "; Subleading offline trkiso [GeV]; Subleading HLT trkiso [GeV]" , 50 , 0. , 10. , 50 , 0. , 10. );
   hists_2d_["h_lead_reltrkiso_hlt_vs_off"+suf] = fs->make<TH2F>(Form("h_lead_reltrkiso_hlt_vs_off%s",suf.c_str()) , "; Leading offline trkiso / p_{T}; Leading HLT trkiso / p_{T}" , 50 , 0. , 2. , 50 , 0. , 2. );
@@ -1375,9 +1483,22 @@ void DilepTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLepton
   if (isHLT) hlt_suf = "_hlt";
 
   int nlep = 0;
-  if (lead.lv.pt() > 0) ++nlep;
-  if (subl.lv.pt() > 0) ++nlep;
-  if (!isHLT) hists_1d_["h_nlep_off"+suf+hlt_suf]->Fill(nlep);
+  int nel = 0;
+  int nmu = 0;
+  if (lead.lv.pt() > 0) {
+    ++nlep;
+    if (lead.type == 11) ++nel;
+    else if (lead.type == 13) ++nmu;
+  }
+  if (subl.lv.pt() > 0) {
+    ++nlep;
+    if (subl.type == 11) ++nel;
+    else if (subl.type == 13) ++nmu;
+  }
+  if (!isHLT) {
+    hists_1d_["h_nlep_off"+suf+hlt_suf]->Fill(nlep);
+    hists_2d_["h_nelnmu_off"+suf+hlt_suf]->Fill(nel,nmu);
+  }
   if (nlep == 0) return;
 
   if (lead.lv.pt() > 0) {
@@ -1442,11 +1563,13 @@ void DilepTrigAnalyzerRECO::fillHistsRecoHLT(const StudyLepton& off_lead, const 
   std::string suf(suffix);
   if (suffix.size()) suf = "_"+suffix;
 
-  int nlep = 0;
-  if (off_lead.lv.pt() > 0) ++nlep;
-  if (off_subl.lv.pt() > 0) ++nlep;
-  if (nlep == 0) return;
+  // int nlep = 0;
+  // if (off_lead.lv.pt() > 0) ++nlep;
+  // if (off_subl.lv.pt() > 0) ++nlep;
+  //  if (nlep == 0) return;
 
+  bool hlt_match_lead = false;
+  bool hlt_match_subl = false;
   if (off_lead.lv.pt() > 0.) {
     bool match_lead = false;
     if (hlt_lead.lv.pt() > 0. && (off_lead.type == hlt_lead.type)) {
@@ -1459,6 +1582,7 @@ void DilepTrigAnalyzerRECO::fillHistsRecoHLT(const StudyLepton& off_lead, const 
 	  hists_2d_["h_lead_reltrkiso_hlt_vs_off"+suf]->Fill(off_lead.trkiso/off_lead.lv.pt(),hlt_lead.trkiso/hlt_lead.lv.pt());
 	}
 	match_lead = true;
+	hlt_match_lead = true;
       }
     } // valid hlt_lead
     // if we didn't match the lead, and the leptons are the same type, then check subleading
@@ -1471,6 +1595,7 @@ void DilepTrigAnalyzerRECO::fillHistsRecoHLT(const StudyLepton& off_lead, const 
 	  hists_2d_["h_lead_abstrkiso_hlt_vs_off"+suf]->Fill(off_lead.trkiso,hlt_subl.trkiso);
 	  hists_2d_["h_lead_reltrkiso_hlt_vs_off"+suf]->Fill(off_lead.trkiso/off_lead.lv.pt(),hlt_subl.trkiso/hlt_subl.lv.pt());
 	}
+	hlt_match_subl = true;
       }
     } // hlt_subl
   } // valid off_lead
@@ -1488,6 +1613,7 @@ void DilepTrigAnalyzerRECO::fillHistsRecoHLT(const StudyLepton& off_lead, const 
 	  hists_2d_["h_subl_reltrkiso_hlt_vs_off"+suf]->Fill(off_subl.trkiso/off_subl.lv.pt(),hlt_lead.trkiso/hlt_lead.lv.pt());
 	}
 	match_lead = true;
+	hlt_match_lead = true;
       }
     } // valid hlt_lead
     else if (!match_lead && hlt_subl.lv.pt() > 0. && (off_subl.type == hlt_subl.type)) {
@@ -1499,9 +1625,26 @@ void DilepTrigAnalyzerRECO::fillHistsRecoHLT(const StudyLepton& off_lead, const 
 	  hists_2d_["h_subl_abstrkiso_hlt_vs_off"+suf]->Fill(off_subl.trkiso,hlt_subl.trkiso);
 	  hists_2d_["h_subl_reltrkiso_hlt_vs_off"+suf]->Fill(off_subl.trkiso/off_subl.lv.pt(),hlt_subl.trkiso/hlt_subl.lv.pt());
 	}
+	hlt_match_subl = true;
       }
     } // hlt_subl
   } // valid off_subl
+
+  // plots for HLT leptons without offline matches
+  if (!hlt_match_lead && (hlt_lead.lv.pt() > 0.)) {
+    hists_1d_["h_lead_pt_hltonly"+suf]->Fill(hlt_lead.lv.pt());
+    hists_1d_["h_lead_eta_hltonly"+suf]->Fill(hlt_lead.lv.eta());
+  }
+  if (!hlt_match_subl && (hlt_subl.lv.pt() > 0.)) {
+    hists_1d_["h_subl_pt_hltonly"+suf]->Fill(hlt_subl.lv.pt());
+    hists_1d_["h_subl_eta_hltonly"+suf]->Fill(hlt_subl.lv.eta());
+  }
+  if ((!hlt_match_lead || !hlt_match_subl) && (hlt_lead.lv.pt() > 0.) && (hlt_subl.lv.pt() > 0.)) {
+    float dr_hlt = ROOT::Math::VectorUtil::DeltaR(hlt_lead.lv,hlt_subl.lv);
+    LorentzVector dilep_hlt = hlt_lead.lv + hlt_subl.lv;
+    hists_1d_["h_mll_hltonly"+suf]->Fill(dilep_hlt.M());
+    hists_1d_["h_dr_hltonly"+suf]->Fill(dr_hlt);
+  }
 
   return;
 }
