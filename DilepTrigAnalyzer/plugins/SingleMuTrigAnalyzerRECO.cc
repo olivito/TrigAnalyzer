@@ -471,10 +471,11 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
   // find vertex 0 in vertex container
   const VertexCollection* vertexCollection = vertexHandle_.product();
   VertexCollection::const_iterator firstGoodVertex = vertexCollection->end();
+  nvtx_ = 0;
   for ( VertexCollection::const_iterator vtx = vertexCollection->begin(); vtx != vertexCollection->end(); ++vtx ) {
     if (  !vtx->isFake() && vtx->ndof()>=4. && vtx->position().Rho()<=2.0 && fabs(vtx->position().Z())<=24.0 ) {
-      firstGoodVertex = vtx;
-      break;
+      if (firstGoodVertex == vertexCollection->end()) firstGoodVertex = vtx;
+      ++nvtx_;
     }
   } // loop on vertices
 
@@ -838,6 +839,7 @@ void SingleMuTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const s
   hists_1d_["h_subl_dz_hlt"+suf] = fs->make<TH1F>(Form("h_subl_dz_hlt%s",suf.c_str()) , "; Subleading dz wrt hlt vertex" , 100 , -20 , 20 );
   hists_1d_["h_mll"+suf] = fs->make<TH1F>(Form("h_mll%s",suf.c_str()) , "; M_{ll} [GeV]" , 150 , 0. , 150. );
   hists_1d_["h_dr"+suf] = fs->make<TH1F>(Form("h_dr%s",suf.c_str()) , "; #DeltaR" , 600 , 0. , 6. );
+  hists_1d_["h_nvtx"+suf] = fs->make<TH1F>(Form("h_nvtx%s",suf.c_str()) , "; N(vtx)" , 60 , -0.5 , 59.5 );
 
   // hists_1d_["h_lead_pt_os"+suf] = fs->make<TH1F>(Form("h_lead_pt_os%s",suf.c_str()) , "; Leading p_{T} [GeV]" , 100 , 0. , 100. );
   // hists_1d_["h_subl_pt_os"+suf] = fs->make<TH1F>(Form("h_subl_pt_os%s",suf.c_str()) , "; Subleading p_{T} [GeV]" , 100 , 0. , 100. );
@@ -907,6 +909,7 @@ void SingleMuTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLep
     hists_1d_["h_lead_nhits"+suf+hlt_suf]->Fill(lead.nhits);
     hists_1d_["h_lead_dxy"+suf+hlt_suf]->Fill(lead.dxy);
     hists_1d_["h_lead_dz_hlt"+suf+hlt_suf]->Fill(lead.dz_hlt);
+    hists_1d_["h_nvtx"+suf+hlt_suf]->Fill(nvtx_);
     // if (lead.type == 13) {
     //   hists_1d_["h_lead_abstrkiso"+suf+hlt_suf]->Fill(lead.trkiso);
     //   hists_1d_["h_lead_reltrkiso"+suf+hlt_suf]->Fill(lead.trkiso/lead.lv.pt());

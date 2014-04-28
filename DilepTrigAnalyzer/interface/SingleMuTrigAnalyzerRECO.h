@@ -129,5 +129,8 @@ class SingleMuTrigAnalyzerRECO : public edm::EDAnalyzer {
   trigger::Vids        muonIds_;
   trigger::VRmuon      muonRefs_;
 
+  // internal vars for each event
+  int nvtx_;
+
 };
 #endif
