@@ -165,7 +165,7 @@ SingleMuTrigAnalyzerRECO::analyze(const edm::Event& iEvent, const edm::EventSetu
   // for printing out HLT PF Cand info
   if (dumpHLTTracks_) {
     iEvent.getByLabel(hltTracksTag_, hltTracksHandle_);
-    iEvent.getByLabel(hltVtxInputTag_, hltVertexHandle_);
+    //  iEvent.getByLabel(hltVtxInputTag_, hltVertexHandle_);
   }
 
   if (doOffGenMatch_ || compareToGen_) {
@@ -293,7 +293,7 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
     if (nMuons>0) {
       if (verbose_) {
 	cout << "   Muons: " << nMuons << ", MuonRefs: " << muonRefs_.size()
-	     << "  - the objects: # id pt eta phi vz id key eta_trkref phi_trkref" << endl;
+	     << "  - the objects: # id pt eta phi vz id key" << endl;
       }
       for (unsigned int i=0; i!=nMuons; ++i) {
 
@@ -641,12 +641,12 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
       dxy = innerTrack->dxy(firstGoodVertex->position());
     }
     float dz_hlt = -999.;
-    if (dumpHLTTracks_) {
-      const VertexCollection* hltVertexCollection = hltVertexHandle_.product();
-      if (hltVertexCollection->size()) {
-	dz_hlt = muon->vz() - hltVertexCollection->at(0).position().Z();
-      }
-    }
+    // if (dumpHLTTracks_) {
+    //   const VertexCollection* hltVertexCollection = hltVertexHandle_.product();
+    //   if (hltVertexCollection->size()) {
+    // 	dz_hlt = muon->vz() - hltVertexCollection->at(0).position().Z();
+    //   }
+    // }
 
     // check match to trigger objects
     bool match = false;
@@ -761,14 +761,14 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
     // loop over HLT tracks near offline muon and print info
     if (dumpHLTTracks_) {
       edm::Handle<reco::TrackCollection> hltTracksHandle = hltTracksHandle_;
-      const VertexCollection* hltVertexCollection = hltVertexHandle_.product();
+      //    const VertexCollection* hltVertexCollection = hltVertexHandle_.product();
 
-      cout << "   ++++ online vertex z: ";
-      if (hltVertexCollection->size()) {
-	cout << hltVertexCollection->at(0).position().Z() << endl;
-      } else {
-	cout << "none found!!!" << endl;
-      }
+      // cout << "   ++++ online vertex z: ";
+      // if (hltVertexCollection->size()) {
+      // 	cout << hltVertexCollection->at(0).position().Z() << endl;
+      // } else {
+      // 	cout << "none found!!!" << endl;
+      // }
       cout << "   ++++ hlt tracks near leading offline muon:" << endl;
       // find hlt tracks near offline muons
       TrackCollection::const_iterator hlt_trks_end = hltTracksHandle->end();  // Iterator
