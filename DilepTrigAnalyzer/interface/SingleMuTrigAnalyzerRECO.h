@@ -32,6 +32,8 @@
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
+#include "DataFormats/L1Trigger/interface/L1MuonParticle.h"
+#include "DataFormats/L1Trigger/interface/L1MuonParticleFwd.h"
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
@@ -104,6 +106,9 @@ class SingleMuTrigAnalyzerRECO : public edm::EDAnalyzer {
   bool doOffGenMatch_;
   edm::InputTag genParticlesTag_;
   bool compareToGen_;
+  bool doOffL1Match_;
+  edm::InputTag l1MuonsTag_;
+  bool compareToL1_;
   bool verbose_;
 
   /// additional class data memebers
@@ -118,6 +123,7 @@ class SingleMuTrigAnalyzerRECO : public edm::EDAnalyzer {
   edm::Handle<reco::MuonCollection> musHandle_;
   edm::Handle<reco::TrackCollection> hltTracksHandle_;
   edm::Handle<reco::GenParticleCollection> genParticlesHandle_;
+  edm::Handle<l1extra::L1MuonParticleCollection> l1MuonsHandle_;
 
   std::map<std::string,TH1F*> hists_1d_;
   std::map<std::string,TH2F*> hists_2d_;

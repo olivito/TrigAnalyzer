@@ -32,6 +32,7 @@
 
 using namespace reco;
 using namespace edm;
+using namespace l1extra;
 
 //
 // constructors and destructor
@@ -53,6 +54,9 @@ SingleMuTrigAnalyzerRECO::SingleMuTrigAnalyzerRECO(const edm::ParameterSet& ps) 
   doOffGenMatch_(ps.getParameter<bool>("doOffGenMatch")),
   genParticlesTag_(ps.getParameter<edm::InputTag>("genParticles")),
   compareToGen_(ps.getParameter<bool>("compareToGen")),
+  doOffL1Match_(ps.getParameter<bool>("doOffL1Match")),
+  l1MuonsTag_(ps.getParameter<edm::InputTag>("l1Muons")),
+  compareToL1_(ps.getParameter<bool>("compareToL1")),
   verbose_(ps.getParameter<bool>("verbose"))
 {
   using namespace std;
@@ -74,6 +78,9 @@ SingleMuTrigAnalyzerRECO::SingleMuTrigAnalyzerRECO(const edm::ParameterSet& ps) 
        << "   DoOffGenMatch = " << doOffGenMatch_ << endl
        << "   GenParticlesTag = " << genParticlesTag_.encode() << endl
        << "   CompareToGen = " << compareToGen_ << endl
+       << "   DoOffL1Match = " << doOffL1Match_ << endl
+       << "   L1MuonsTag = " << l1MuonsTag_.encode() << endl
+       << "   CompareToL1 = " << compareToL1_ << endl
        << "   Verbose = " << verbose_ << endl;
 
   hltTriggerNames_.push_back(tkTriggerName_);
@@ -170,6 +177,10 @@ SingleMuTrigAnalyzerRECO::analyze(const edm::Event& iEvent, const edm::EventSetu
 
   if (doOffGenMatch_ || compareToGen_) {
     iEvent.getByLabel(genParticlesTag_, genParticlesHandle_);
+  }
+  
+  if (doOffL1Match_ || compareToL1_) {
+    iEvent.getByLabel(l1MuonsTag_, l1MuonsHandle_);
   }
   
   trigpass_results_ = 0;
@@ -567,6 +578,20 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
       } // loop over genps
       if (!match) continue;
     } // do gen match
+
+    // match to L1 object
+    if (doOffL1Match_) {
+      match = false;
+      L1MuonParticleCollection::const_iterator l1mus_end = l1MuonsHandle_->end();
+      for ( L1MuonParticleCollection::const_iterator l1mu = l1MuonsHandle_->begin(); l1mu != l1mus_end; ++l1mu ) {
+	float dr = ROOT::Math::VectorUtil::DeltaR(lv,l1mu->p4());
+	if (dr < 0.3) {
+	  match = true;
+	  break;
+	}
+      } // loop over l1mus
+      if (!match) continue;
+    } // do L1 match
 
     // basic dz cut to remove muons from large z
     bool pass_dz = bool(fabs(muon->muonBestTrack()->dz(firstGoodVertex->position())) < 0.5);
