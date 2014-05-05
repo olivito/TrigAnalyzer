@@ -412,8 +412,8 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
     if (foundMuons) break;
   } // backwards loop on modules
 
-  if (hlt_mu_lead_idx == -1) {
-    cout << "SingleMuTrigAnalyzerRECO::analyzeTrigger: no valid trigger leptons!" << endl;
+  if (accept && (hlt_mu_lead_idx == -1)) {
+    cout << "SingleMuTrigAnalyzerRECO::analyzeTrigger: WARNING!! no valid trigger leptons!" << endl;
     //    return true;
   }
 
@@ -585,7 +585,7 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
       L1MuonParticleCollection::const_iterator l1mus_end = l1MuonsHandle_->end();
       for ( L1MuonParticleCollection::const_iterator l1mu = l1MuonsHandle_->begin(); l1mu != l1mus_end; ++l1mu ) {
 	float dr = ROOT::Math::VectorUtil::DeltaR(lv,l1mu->p4());
-	if (dr < 0.3) {
+	if (dr < 0.2) {
 	  match = true;
 	  break;
 	}
