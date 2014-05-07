@@ -100,6 +100,9 @@ SingleMuTrigAnalyzerRECO::SingleMuTrigAnalyzerRECO(const edm::ParameterSet& ps) 
     bookHists(fs,hltShortNames_.at(itrig)+"_tight");
     bookHists(fs,hltShortNames_.at(itrig)+"_tight_match");
     bookHists(fs,hltShortNames_.at(itrig)+"_tight_nomatch");
+    bookHistsL1Comp(fs,hltShortNames_.at(itrig)+"_tight");
+    bookHistsL1Comp(fs,hltShortNames_.at(itrig)+"_tight_match");
+    bookHistsL1Comp(fs,hltShortNames_.at(itrig)+"_tight_nomatch");
   }
 
 }
@@ -584,6 +587,8 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
       match = false;
       L1MuonParticleCollection::const_iterator l1mus_end = l1MuonsHandle_->end();
       for ( L1MuonParticleCollection::const_iterator l1mu = l1MuonsHandle_->begin(); l1mu != l1mus_end; ++l1mu ) {
+	// check L1 pt
+	if (l1mu->pt() < 15.) continue;
 	float dr = ROOT::Math::VectorUtil::DeltaR(lv,l1mu->p4());
 	if (dr < 0.2) {
 	  match = true;
@@ -769,10 +774,37 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
   // offline tight
   if (off_mu_tight_lead_idx >= 0) {
     fillHists(off_mu_tight_lead,off_mu_tight_subl,triggerShort+"_tight",false);
+    float l1_min_dr = 99.;
+    StudyLepton l1_mu_match;
+    l1_mu_match.type = 13;
+    l1_mu_match.isHLT = false;
+    l1_mu_match.isGen = false;
+    // loop over l1 muons and find matching muon, within dR < 0.5
+    if (compareToL1_) {
+      L1MuonParticleCollection::const_iterator l1mus_end = l1MuonsHandle_->end();
+      L1MuonParticleCollection::const_iterator l1mu_match_iter = l1mus_end;
+      for ( L1MuonParticleCollection::const_iterator l1mu = l1MuonsHandle_->begin(); l1mu != l1mus_end; ++l1mu ) {
+	// check L1 pt
+	if (l1mu->pt() < 15.) continue;
+	float dr = ROOT::Math::VectorUtil::DeltaR(off_mu_tight_lead.lv,l1mu->p4());
+	if (dr < l1_min_dr) {
+	  l1_min_dr = dr;
+	  l1mu_match_iter = l1mu;
+	}
+      } // loop over l1mus
+      if (l1_min_dr < 0.5) {
+	l1_mu_match.lv = l1mu_match_iter->p4();
+	l1_mu_match.charge = l1mu_match_iter->charge();
+        fillHistsL1Comp(off_mu_tight_lead,l1_mu_match,triggerShort+"_tight");
+      }
+    } // do L1 match
+
     if (off_mu_tight_lead_trigmatch) {
       fillHists(off_mu_tight_lead,off_mu_tight_subl,triggerShort+"_tight_match",false);
+      if (compareToL1_ && l1_min_dr < 0.5) fillHistsL1Comp(off_mu_tight_lead,l1_mu_match,triggerShort+"_tight_match");
     } else {
       fillHists(off_mu_tight_lead,off_mu_tight_subl,triggerShort+"_tight_nomatch",false);
+      if (compareToL1_ && l1_min_dr < 0.5) fillHistsL1Comp(off_mu_tight_lead,l1_mu_match,triggerShort+"_tight_nomatch");
     }
   } // tight
   // fillHistsRecoHLT(off_mu_tight_lead,off_mu_tight_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_tight");
@@ -1085,6 +1117,51 @@ void SingleMuTrigAnalyzerRECO::fillHistsGen(const StudyLepton& mu, const std::st
 
   hists_1d_["h_pt"+suf]->Fill(mu.lv.pt());
   hists_1d_["h_eta"+suf]->Fill(mu.lv.eta());
+
+  return;
+}
+
+//____________________________________________________________________________
+void SingleMuTrigAnalyzerRECO::bookHistsL1Comp(edm::Service<TFileService>& fs, const std::string& suffix) {
+
+  std::string suf(suffix);
+  if (suffix.size()) suf = "_"+suffix;
+
+  hists_1d_["h_l1comp_dr"+suf] = fs->make<TH1F>(Form("h_l1comp_dr%s",suf.c_str()) , "; #DeltaR(off,L1)" , 400 , 0. , 2. );
+  hists_1d_["h_l1comp_deta"+suf] = fs->make<TH1F>(Form("h_l1comp_deta%s",suf.c_str()) , "; #eta(off) - #eta(L1)" , 200 , -1. , 1. );
+  hists_1d_["h_l1comp_dphi"+suf] = fs->make<TH1F>(Form("h_l1comp_dphi%s",suf.c_str()) , "; #phi(off) - #phi(L1)" , 200 , -1. , 1. );
+  hists_1d_["h_l1comp_pos_cor_dphi"+suf] = fs->make<TH1F>(Form("h_l1comp_pos_cor_dphi%s",suf.c_str()) , "; #phi(off) - #phi(L1)" , 200 , -1. , 1. );
+  hists_1d_["h_l1comp_neg_cor_dphi"+suf] = fs->make<TH1F>(Form("h_l1comp_neg_cor_dphi%s",suf.c_str()) , "; #phi(off) - #phi(L1)" , 200 , -1. , 1. );
+  hists_1d_["h_l1comp_pos_wrong_dphi"+suf] = fs->make<TH1F>(Form("h_l1comp_pos_wrong_dphi%s",suf.c_str()) , "; #phi(off) - #phi(L1)" , 200 , -1. , 1. );
+  hists_1d_["h_l1comp_neg_wrong_dphi"+suf] = fs->make<TH1F>(Form("h_l1comp_neg_wrong_dphi%s",suf.c_str()) , "; #phi(off) - #phi(L1)" , 200 , -1. , 1. );
+  hists_1d_["h_l1comp_dpt"+suf] = fs->make<TH1F>(Form("h_l1comp_dpt%s",suf.c_str()) , "; p_{T}(off) - p_{T}(L1) [GeV]" , 200 , -100. , 100. );
+  hists_1d_["h_l1comp_qprod"+suf] = fs->make<TH1F>(Form("h_l1comp_qprod%s",suf.c_str()) , "; q(off) * q(L1)" , 3 , -1.5 , 1.5 );
+
+  return;
+}
+
+//____________________________________________________________________________
+void SingleMuTrigAnalyzerRECO::fillHistsL1Comp(const StudyLepton& mu_off, const StudyLepton& mu_l1, const std::string& suffix) {
+
+  //  std::cout << "SingleMuTrigAnalyzerRECO::fillHists: called with suffix: " << suffix << ", isHLT: " << isHLT << std::endl;
+
+  std::string suf(suffix);
+  if (suffix.size()) suf = "_"+suffix;
+
+  hists_1d_["h_l1comp_dr"+suf]->Fill(ROOT::Math::VectorUtil::DeltaR(mu_off.lv,mu_l1.lv));
+  hists_1d_["h_l1comp_deta"+suf]->Fill(mu_off.lv.eta() - mu_l1.lv.eta() ); 
+  //  float dphi = acos( cos(mu_off.lv.phi() - mu_l1.lv.phi()) );
+  float dphi = mu_off.lv.phi() - mu_l1.lv.phi();
+  hists_1d_["h_l1comp_dphi"+suf]->Fill(dphi);
+  if (mu_off.charge == mu_l1.charge) {
+    if (mu_off.charge == 1) hists_1d_["h_l1comp_pos_cor_dphi"+suf]->Fill(dphi);
+    else if (mu_off.charge == -1) hists_1d_["h_l1comp_neg_cor_dphi"+suf]->Fill(dphi);
+  } else {
+    if (mu_off.charge == 1) hists_1d_["h_l1comp_pos_wrong_dphi"+suf]->Fill(dphi);
+    else if (mu_off.charge == -1) hists_1d_["h_l1comp_neg_wrong_dphi"+suf]->Fill(dphi);
+  }
+  hists_1d_["h_l1comp_qprod"+suf]->Fill(mu_off.charge * mu_l1.charge);
+  hists_1d_["h_l1comp_dpt"+suf]->Fill(mu_off.lv.pt() - mu_l1.lv.pt());
 
   return;
 }

@@ -88,6 +88,9 @@ class SingleMuTrigAnalyzerRECO : public edm::EDAnalyzer {
   void bookHistsGen(edm::Service<TFileService>& fs, const std::string& suffix);
   void fillHistsGen(const StudyLepton& mu, const std::string& suffix);
 
+  void bookHistsL1Comp(edm::Service<TFileService>& fs, const std::string& suffix);
+  void fillHistsL1Comp(const StudyLepton& mu_off, const StudyLepton& mu_l1, const std::string& suffix);
+
   float muonPFiso(const reco::Muon& mu);
 
   /// module config parameters
