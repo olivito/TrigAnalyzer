@@ -8,5 +8,7 @@ dilepTrigAnalyzerRECO = cms.EDAnalyzer("DilepTrigAnalyzerRECO",
     electronsInputTag = cms.InputTag("gsfElectrons"),
     muonsInputTag = cms.InputTag("muons"),
     vtxInputTag = cms.InputTag("offlinePrimaryVertices"),
+    doOffGenMatch = cms.bool(False),
+    genParticles = cms.InputTag("genParticles","","SIM"),
     verbose = cms.bool(False)
 )
