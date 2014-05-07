@@ -1454,17 +1454,28 @@ void DilepTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const std:
 
   hists_1d_["h_lead_abstrkiso"+suf] = fs->make<TH1F>(Form("h_lead_abstrkiso%s",suf.c_str()) , "; Leading charged pfiso [GeV]" , 200 , 0. , 10. );
   hists_1d_["h_subl_abstrkiso"+suf] = fs->make<TH1F>(Form("h_subl_abstrkiso%s",suf.c_str()) , "; Subleading charged pfiso [GeV]" , 200 , 0. , 10. );
-  hists_1d_["h_both_abstrkiso"+suf] = fs->make<TH1F>(Form("h_both_abstrkiso%s",suf.c_str()) , "; charged pfiso [GeV]" , 200 , 0. , 10. );
   hists_1d_["h_lead_reltrkiso"+suf] = fs->make<TH1F>(Form("h_lead_reltrkiso%s",suf.c_str()) , "; Leading charged pfiso / p_{T}" , 200 , 0. , 2. );
   hists_1d_["h_subl_reltrkiso"+suf] = fs->make<TH1F>(Form("h_subl_reltrkiso%s",suf.c_str()) , "; Subleading charged pfiso / p_{T}" , 200 , 0. , 2. );
-  hists_1d_["h_both_reltrkiso"+suf] = fs->make<TH1F>(Form("h_both_reltrkiso%s",suf.c_str()) , "; charged pfiso / p_{T}" , 200 , 0. , 2. );
 
   hists_1d_["h_lead_abspfiso"+suf] = fs->make<TH1F>(Form("h_lead_abspfiso%s",suf.c_str()) , "; Leading pfiso [GeV]" , 200 , 0. , 10. );
   hists_1d_["h_subl_abspfiso"+suf] = fs->make<TH1F>(Form("h_subl_abspfiso%s",suf.c_str()) , "; Subleading pfiso [GeV]" , 200 , 0. , 10. );
-  hists_1d_["h_both_abspfiso"+suf] = fs->make<TH1F>(Form("h_both_abspfiso%s",suf.c_str()) , "; pfiso [GeV]" , 200 , 0. , 10. );
   hists_1d_["h_lead_relpfiso"+suf] = fs->make<TH1F>(Form("h_lead_relpfiso%s",suf.c_str()) , "; Leading pfiso / p_{T}" , 200 , 0. , 2. );
   hists_1d_["h_subl_relpfiso"+suf] = fs->make<TH1F>(Form("h_subl_relpfiso%s",suf.c_str()) , "; Subleading pfiso / p_{T}" , 200 , 0. , 2. );
+
+  hists_1d_["h_both_abstrkiso"+suf] = fs->make<TH1F>(Form("h_both_abstrkiso%s",suf.c_str()) , "; charged pfiso [GeV]" , 200 , 0. , 10. );
+  hists_1d_["h_both_reltrkiso"+suf] = fs->make<TH1F>(Form("h_both_reltrkiso%s",suf.c_str()) , "; charged pfiso / p_{T}" , 200 , 0. , 2. );
+  hists_1d_["h_both_abspfiso"+suf] = fs->make<TH1F>(Form("h_both_abspfiso%s",suf.c_str()) , "; pfiso [GeV]" , 200 , 0. , 10. );
   hists_1d_["h_both_relpfiso"+suf] = fs->make<TH1F>(Form("h_both_relpfiso%s",suf.c_str()) , "; pfiso / p_{T}" , 200 , 0. , 2. );
+
+  hists_1d_["h_both_onz_abstrkiso"+suf] = fs->make<TH1F>(Form("h_both_onz_abstrkiso%s",suf.c_str()) , "; charged pfiso [GeV]" , 200 , 0. , 10. );
+  hists_1d_["h_both_onz_reltrkiso"+suf] = fs->make<TH1F>(Form("h_both_onz_reltrkiso%s",suf.c_str()) , "; charged pfiso / p_{T}" , 200 , 0. , 2. );
+  hists_1d_["h_both_onz_abspfiso"+suf] = fs->make<TH1F>(Form("h_both_onz_abspfiso%s",suf.c_str()) , "; pfiso [GeV]" , 200 , 0. , 10. );
+  hists_1d_["h_both_onz_relpfiso"+suf] = fs->make<TH1F>(Form("h_both_onz_relpfiso%s",suf.c_str()) , "; pfiso / p_{T}" , 200 , 0. , 2. );
+
+  hists_1d_["h_both_offz_abstrkiso"+suf] = fs->make<TH1F>(Form("h_both_offz_abstrkiso%s",suf.c_str()) , "; charged pfiso [GeV]" , 200 , 0. , 10. );
+  hists_1d_["h_both_offz_reltrkiso"+suf] = fs->make<TH1F>(Form("h_both_offz_reltrkiso%s",suf.c_str()) , "; charged pfiso / p_{T}" , 200 , 0. , 2. );
+  hists_1d_["h_both_offz_abspfiso"+suf] = fs->make<TH1F>(Form("h_both_offz_abspfiso%s",suf.c_str()) , "; pfiso [GeV]" , 200 , 0. , 10. );
+  hists_1d_["h_both_offz_relpfiso"+suf] = fs->make<TH1F>(Form("h_both_offz_relpfiso%s",suf.c_str()) , "; pfiso / p_{T}" , 200 , 0. , 2. );
 
   hists_1d_["h_lead_offhlt_dpt"+suf] = fs->make<TH1F>(Form("h_lead_offhlt_dpt%s",suf.c_str()) , "; Leading (p_{T}^{off} - p_{T}^{HLT}) / p_{T}^{off}" , 250 , -5. , 5. );
   hists_1d_["h_subl_offhlt_dpt"+suf] = fs->make<TH1F>(Form("h_subl_offhlt_dpt%s",suf.c_str()) , "; Subleading (p_{T}^{off} - p_{T}^{HLT}) / p_{T}^{off}" , 250 , -5. , 5. );
@@ -1541,21 +1552,48 @@ void DilepTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLepton
 
     if (lead.lv.pt() > 0) {
       LorentzVector dilep = lead.lv+subl.lv;
-      hists_1d_["h_mll"+suf+hlt_suf]->Fill(dilep.M());
+      float mll = dilep.M();
+      hists_1d_["h_mll"+suf+hlt_suf]->Fill(mll);
       float dr = ROOT::Math::VectorUtil::DeltaR(lead.lv,subl.lv);
       hists_1d_["h_dr"+suf+hlt_suf]->Fill(dr);
       // these plots make more sense than the individual leg iso plots
       //  for comparing with the trigger, since the dilep trigger always
       //  cuts on both legs
       if (lead.type == 13 && subl.type == 13 && !isHLT) {
-	hists_1d_["h_both_abstrkiso"+suf+hlt_suf]->Fill(lead.trkiso);
-	hists_1d_["h_both_abstrkiso"+suf+hlt_suf]->Fill(subl.trkiso);
-	hists_1d_["h_both_reltrkiso"+suf+hlt_suf]->Fill(lead.trkiso/lead.lv.pt());
-	hists_1d_["h_both_reltrkiso"+suf+hlt_suf]->Fill(subl.trkiso/subl.lv.pt());
-	hists_1d_["h_both_abspfiso"+suf+hlt_suf]->Fill(lead.pfiso);
-	hists_1d_["h_both_abspfiso"+suf+hlt_suf]->Fill(subl.pfiso);
-	hists_1d_["h_both_relpfiso"+suf+hlt_suf]->Fill(lead.pfiso/lead.lv.pt());
-	hists_1d_["h_both_relpfiso"+suf+hlt_suf]->Fill(subl.pfiso/subl.lv.pt());
+	if (subl.trkiso/subl.lv.pt() < 0.4) {
+	  hists_1d_["h_both_abstrkiso"+suf+hlt_suf]->Fill(lead.trkiso);
+	  hists_1d_["h_both_reltrkiso"+suf+hlt_suf]->Fill(lead.trkiso/lead.lv.pt());
+	  hists_1d_["h_both_abspfiso"+suf+hlt_suf]->Fill(lead.pfiso);
+	  hists_1d_["h_both_relpfiso"+suf+hlt_suf]->Fill(lead.pfiso/lead.lv.pt());
+	  if (81. < mll && mll < 101.) {
+	    hists_1d_["h_both_onz_abstrkiso"+suf+hlt_suf]->Fill(lead.trkiso);
+	    hists_1d_["h_both_onz_reltrkiso"+suf+hlt_suf]->Fill(lead.trkiso/lead.lv.pt());
+	    hists_1d_["h_both_onz_abspfiso"+suf+hlt_suf]->Fill(lead.pfiso);
+	    hists_1d_["h_both_onz_relpfiso"+suf+hlt_suf]->Fill(lead.pfiso/lead.lv.pt());
+	  } else {
+	    hists_1d_["h_both_offz_abstrkiso"+suf+hlt_suf]->Fill(lead.trkiso);
+	    hists_1d_["h_both_offz_reltrkiso"+suf+hlt_suf]->Fill(lead.trkiso/lead.lv.pt());
+	    hists_1d_["h_both_offz_abspfiso"+suf+hlt_suf]->Fill(lead.pfiso);
+	    hists_1d_["h_both_offz_relpfiso"+suf+hlt_suf]->Fill(lead.pfiso/lead.lv.pt());
+	  }
+	}
+	if (lead.trkiso/lead.lv.pt() < 0.4) {
+	  hists_1d_["h_both_abstrkiso"+suf+hlt_suf]->Fill(subl.trkiso);
+	  hists_1d_["h_both_reltrkiso"+suf+hlt_suf]->Fill(subl.trkiso/subl.lv.pt());
+	  hists_1d_["h_both_abspfiso"+suf+hlt_suf]->Fill(subl.pfiso);
+	  hists_1d_["h_both_relpfiso"+suf+hlt_suf]->Fill(subl.pfiso/subl.lv.pt());
+	  if (81. < mll && mll < 101.) {
+	    hists_1d_["h_both_onz_abstrkiso"+suf+hlt_suf]->Fill(subl.trkiso);
+	    hists_1d_["h_both_onz_reltrkiso"+suf+hlt_suf]->Fill(subl.trkiso/subl.lv.pt());
+	    hists_1d_["h_both_onz_abspfiso"+suf+hlt_suf]->Fill(subl.pfiso);
+	    hists_1d_["h_both_onz_relpfiso"+suf+hlt_suf]->Fill(subl.pfiso/subl.lv.pt());
+	  } else {
+	    hists_1d_["h_both_offz_abstrkiso"+suf+hlt_suf]->Fill(subl.trkiso);
+	    hists_1d_["h_both_offz_reltrkiso"+suf+hlt_suf]->Fill(subl.trkiso/subl.lv.pt());
+	    hists_1d_["h_both_offz_abspfiso"+suf+hlt_suf]->Fill(subl.pfiso);
+	    hists_1d_["h_both_offz_relpfiso"+suf+hlt_suf]->Fill(subl.pfiso/subl.lv.pt());
+	  }
+	}
       }
       if (!isHLT && (lead.charge == subl.charge)) {
 	hists_1d_["h_lead_pt_ss"+suf+hlt_suf]->Fill(lead.lv.pt());
