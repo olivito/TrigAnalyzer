@@ -751,10 +751,10 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
   for( GsfElectronCollection::const_iterator el = elsHandle_->begin(); el != els_end; ++el, ++elsIndex ) {
     LorentzVector lv(el->p4());
 
-    if (verbose_) cout << " - reco ele: pt: " << lv.pt() << ", eta: " << lv.eta() << ", phi: " << lv.phi(); 
+    // if (verbose_) cout << " - reco ele: pt: " << lv.pt() << ", eta: " << lv.eta() << ", phi: " << lv.phi(); 
 
     if (lv.pt() < sublPtThresh_e) {
-      if (verbose_) cout << ", FAILS pt" << std::endl;
+      // if (verbose_) cout << ", FAILS pt" << std::endl;
       continue;
     }
 
@@ -763,7 +763,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     if ( (hlt_el_lead_idx >= 0) && (ROOT::Math::VectorUtil::DeltaR(lv,hlt_el_lead.lv) < dr_trigmatch) ) match = true;
     else if ( (hlt_el_subl_idx >= 0) && (ROOT::Math::VectorUtil::DeltaR(lv,hlt_el_subl.lv) < dr_trigmatch) ) match = true;
     if (!match && reqTrigMatch_) {
-      if (verbose_) cout << ", FAILS trig match" << std::endl;
+      // if (verbose_) cout << ", FAILS trig match" << std::endl;
       continue;
     }
 
@@ -773,7 +773,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 //     float phpfiso = el->pfIsolationVariables().sumPhotonEt;
 // bool pass_loose = EgammaCutBasedEleId::TestWP(EgammaCutBasedEleId::LOOSE , el, convs_h, beamSpotreco, vertexHandle, pfiso_ch, pfiso_em, pfiso_nh, rhoIso);
 
-    if (verbose_) cout << ", passes presel cuts" << std::endl;
+    // if (verbose_) cout << ", passes presel cuts" << std::endl;
 
     // pt ordering
     if ( ((off_el_lead_idx == -1) || (lv.pt() > off_el_lead.lv.pt())) && (lv.pt() > leadPtThresh_e) ) {
@@ -862,7 +862,7 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
   for ( MuonCollection::const_iterator muon = musHandle_->begin(); muon != muons_end; ++muon, ++muonIndex ) {
     LorentzVector lv(muon->p4());
 
-    if (verbose_) cout << " - reco muon: pt: " << lv.pt() << ", eta: " << lv.eta() << ", phi: " << lv.phi(); 
+    //    if (verbose_) cout << " - reco muon: pt: " << lv.pt() << ", eta: " << lv.eta() << ", phi: " << lv.phi(); 
 
     bool duplicate = false;
     // check if this muon is already flagged as a duplicate
@@ -874,13 +874,13 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
       }
     } // loop on found duplicates
     if (duplicate) {
-      if (verbose_) cout << ", DUPLICATE" << std::endl;
+      // if (verbose_) cout << ", DUPLICATE" << std::endl;
       continue;
     }
 
     // min pt cut
     if (muon->pt() < sublPtThresh_m) {
-      if (verbose_) cout << ", FAILS pt" << std::endl;
+      // if (verbose_) cout << ", FAILS pt" << std::endl;
       continue;
     }
 
@@ -890,14 +890,14 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     else if ( (hlt_mu_subl_idx >= 0) && (ROOT::Math::VectorUtil::DeltaR(lv,hlt_mu_subl.lv) < dr_trigmatch) ) match = true;
     else if ( (hlt_mu_third_idx >= 0) && (ROOT::Math::VectorUtil::DeltaR(lv,hlt_mu_third.lv) < dr_trigmatch) ) match = true;
     if (!match && reqTrigMatch_) {
-      if (verbose_) cout << ", FAILS trig match" << std::endl;
+      // if (verbose_) cout << ", FAILS trig match" << std::endl;
       continue;
     }
 
     // basic dz cut to remove muons from large z
     bool pass_dz = bool(fabs(muon->muonBestTrack()->dz(firstGoodVertex->position())) < 0.5);
     if (!pass_dz) {
-      if (verbose_) cout << ", FAILS dz" << std::endl;
+      // if (verbose_) cout << ", FAILS dz" << std::endl;
       continue;
     }
 
@@ -936,11 +936,11 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
       } // if dR < 0.1 
     } // loop over mu2
     if (duplicate) {
-      if (verbose_) cout << ", DUPLICATE" << std::endl;
+      // if (verbose_) cout << ", DUPLICATE" << std::endl;
       continue;
     }
 
-    if (verbose_) cout << ", passes presel cuts" << std::endl;
+    // if (verbose_) cout << ", passes presel cuts" << std::endl;
 
     muons_good.push_back(*muon);
 
@@ -1204,16 +1204,25 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 
   // printout for cases where trigger is inefficient
   //  if ( verbose_ && ismm && (off_mu_trigiso_lead_idx >= 0) && (off_mu_trigiso_subl_idx >= 0) ) {
-  //  if ( verbose_ && (triggerEnum == mm) && (off_mu_trigiso_lead_idx >= 0) && (off_mu_trigiso_subl_idx >= 0) ) {
-  if ( verbose_ && (triggerEnum == em) && (off_mu_tliso_lead_idx >= 0) && (off_el_lead_idx >= 0) ) {
+  if ( verbose_ && (triggerEnum == mm) && (off_mu_trigiso_lead_idx >= 0) && (off_mu_trigiso_subl_idx >= 0) ) {
+    // if ( verbose_ && (triggerEnum == em) && (off_mu_tliso_lead_idx >= 0) && (off_el_lead_idx >= 0) ) {
     // check that this is the noniso trigger, and that the iso trigger failed
-    // LorentzVector dilep = off_mu_trigiso_lead.lv + off_mu_trigiso_subl.lv;
-    // float deltaR = ROOT::Math::VectorUtil::DeltaR(off_mu_trigiso_lead.lv,off_mu_trigiso_subl.lv);
-    LorentzVector dilep = off_mu_tliso_lead.lv + off_el_lead.lv;
-    float deltaR = ROOT::Math::VectorUtil::DeltaR(off_mu_tliso_lead.lv,off_el_lead.lv);
+    LorentzVector dilep = off_mu_trigiso_lead.lv + off_mu_trigiso_subl.lv;
+    float deltaR = ROOT::Math::VectorUtil::DeltaR(off_mu_trigiso_lead.lv,off_mu_trigiso_subl.lv);
+    cout << "-- event passes noniso trigger: " << triggerName;
+    cout << ", run: " << iEvent.id().run()
+	 << ", event: " << iEvent.id().event() << ", mass: " << dilep.M() << ", deltaR: " << deltaR << endl
+	 << "     hlt mu1 pt: " << hlt_mu_lead.lv.pt() << ", iso: " << hlt_mu_lead.trkiso
+	 << ", hlt mu2 pt: " << hlt_mu_subl.lv.pt() << ", iso: " << hlt_mu_subl.trkiso << endl
+	 << "     off mu1 pt: " << off_mu_trigiso_lead.lv.pt() << ", iso: " << off_mu_trigiso_lead.trkiso
+	 << ", off mu2 pt: " << off_mu_trigiso_subl.lv.pt() << ", iso: " << off_mu_trigiso_subl.trkiso << endl;
+    cout << "     trig enum: " << triggerEnum << ", iso trigger enum: " << isoTriggerEnum
+	 << ", iso trig decision: " << (1 << isoTriggerEnum) << endl;
+    // LorentzVector dilep = off_mu_tliso_lead.lv + off_el_lead.lv;
+    // float deltaR = ROOT::Math::VectorUtil::DeltaR(off_mu_tliso_lead.lv,off_el_lead.lv);
     bool ineff = false;
-    //    if ( (isoTriggerEnum != notrig) && ((trigpass_results_ & (1 << isoTriggerEnum)) == 0) ) {
-    if ( (isoTriggerEnum != notrig) && ((trigpass_results_ & (1 << (isoTriggerEnum - (unsigned int)emi) )) == 0) ) {
+    if ( (isoTriggerEnum != notrig) && ((trigpass_results_ & (1 << isoTriggerEnum)) == 0) ) {
+      // if ( (isoTriggerEnum != notrig) && ((trigpass_results_ & (1 << (isoTriggerEnum - (unsigned int)emi) )) == 0) ) {
       cout << "-- HLT inefficiency, event level! Non-iso trigger: " << triggerName;
       ineff = true;
     }
@@ -1222,18 +1231,18 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
     //   ineff = true;
     // }
     if (ineff) {
+      cout << ", run: " << iEvent.id().run()
+      	   << ", event: " << iEvent.id().event() << ", mass: " << dilep.M() << ", deltaR: " << deltaR << endl
+      	   << "     hlt mu1 pt: " << hlt_mu_lead.lv.pt() << ", iso: " << hlt_mu_lead.trkiso
+      	   << ", hlt mu2 pt: " << hlt_mu_subl.lv.pt() << ", iso: " << hlt_mu_subl.trkiso << endl
+      	   << "     off mu1 pt: " << off_mu_trigiso_lead.lv.pt() << ", iso: " << off_mu_trigiso_lead.trkiso
+      	   << ", off mu2 pt: " << off_mu_trigiso_subl.lv.pt() << ", iso: " << off_mu_trigiso_subl.trkiso << endl;
       // cout << ", run: " << iEvent.id().run()
       // 	   << ", event: " << iEvent.id().event() << ", mass: " << dilep.M() << ", deltaR: " << deltaR << endl
-      // 	   << "     hlt mu1 pt: " << hlt_mu_lead.lv.pt() << ", iso: " << hlt_mu_lead.trkiso
-      // 	   << ", hlt mu2 pt: " << hlt_mu_subl.lv.pt() << ", iso: " << hlt_mu_subl.trkiso << endl
-      // 	   << "     off mu1 pt: " << off_mu_trigiso_lead.lv.pt() << ", iso: " << off_mu_trigiso_lead.trkiso
-      // 	   << ", off mu2 pt: " << off_mu_trigiso_subl.lv.pt() << ", iso: " << off_mu_trigiso_subl.trkiso << endl;
-      cout << ", run: " << iEvent.id().run()
-	   << ", event: " << iEvent.id().event() << ", mass: " << dilep.M() << ", deltaR: " << deltaR << endl
-	   << "     hlt mu pt: " << hlt_mu_lead.lv.pt() << ", iso: " << hlt_mu_lead.trkiso
-	   << ", hlt el pt: " << hlt_el_lead.lv.pt()  << endl
-	   << "     off mu pt: " << off_mu_tliso_lead.lv.pt() << ", iso: " << off_mu_tliso_lead.trkiso
-	   << ", off el pt: " << off_el_lead.lv.pt() << endl;
+      // 	   << "     hlt mu pt: " << hlt_mu_lead.lv.pt() << ", iso: " << hlt_mu_lead.trkiso
+      // 	   << ", hlt el pt: " << hlt_el_lead.lv.pt()  << endl
+      // 	   << "     off mu pt: " << off_mu_tliso_lead.lv.pt() << ", iso: " << off_mu_tliso_lead.trkiso
+      // 	   << ", off el pt: " << off_el_lead.lv.pt() << endl;
       // loop over pf cands near the hlt muons and print them out..
       if (dumpHLTPFCands_) {
 	// edm::Handle<reco::PFCandidateCollection> hltPFCandsHandle = hltPFCandsGlbHandle_;
@@ -1252,9 +1261,9 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,hlt_trk_ref->momentum()) < 0.3) {
 	    hlt_trks_lead.push_back(hlt_trk_ref);
 	  }
-	  // if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,hlt_trk_ref->momentum()) < 0.3) {
-	  //   hlt_trks_subl.push_back(hlt_trk_ref);
-	  // }
+	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,hlt_trk_ref->momentum()) < 0.3) {
+	    hlt_trks_subl.push_back(hlt_trk_ref);
+	  }
 	} // loop on hlt tracks
 
 	// find hlt pf cands near hlt muons
@@ -1280,9 +1289,9 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,off_pfcand->p4()) < 0.3) {
 	    off_pfcands_lead.push_back(*off_pfcand);
 	  }
-	  // if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,off_pfcand->p4()) < 0.3) {
-	  //   off_pfcands_subl.push_back(*off_pfcand);
-	  // }
+	  if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,off_pfcand->p4()) < 0.3) {
+	    off_pfcands_subl.push_back(*off_pfcand);
+	  }
 	} // loop on off pf cands
 
 	// dump hlt pf cands near lead hlt muon
@@ -1333,21 +1342,21 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	  //	       << ", nhits: " << off_pfcand->trackRef()->numberOfValidHits() << ", dR: " << dR << endl;
 	}
 
-	//   // dump hlt pf cands near subl hlt muon
-	//   cout << "   ---- hlt tracks near subleading hlt muon:" << endl;
-	//   std::vector<reco::TrackRef>::const_iterator hlt_trks_subl_end = hlt_trks_subl.end();  // Iterator
-	//   for ( std::vector<reco::TrackRef>::const_iterator hlt_trk = hlt_trks_subl.begin(); hlt_trk != hlt_trks_subl_end; ++hlt_trk ) {
-	//     float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,(**hlt_trk).momentum());
-	//     int vtx = trackVertex(*hltVertexCollection,*hlt_trk);
-	//     float dz = hlt_mu_subl.vz - (**hlt_trk).vz();
-	//     //	  if (fabs(dz) > 1.0) continue;
-	//     if ((fabs(dz) < 0.2) && (dR > 0.01)) cout << "    * ";
-	//     else cout << "      ";
-	//     cout << "pt: " << (**hlt_trk).pt() << ", eta: " << (**hlt_trk).eta() << ", phi: " << (**hlt_trk).phi()
-	// 	 << ", vz: " << (**hlt_trk).vz() << ", vtx: " << vtx
-	// 	 << ", nhits: " << (**hlt_trk).numberOfValidHits() << ", algo: " << (**hlt_trk).algo() 
-	// 	 << ", dR: " << dR << endl;
-	//   }
+	// dump hlt tracks near subl hlt muon
+	cout << "   ---- hlt tracks near subleading hlt muon:" << endl;
+	std::vector<reco::TrackRef>::const_iterator hlt_trks_subl_end = hlt_trks_subl.end();  // Iterator
+	for ( std::vector<reco::TrackRef>::const_iterator hlt_trk = hlt_trks_subl.begin(); hlt_trk != hlt_trks_subl_end; ++hlt_trk ) {
+	  float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,(**hlt_trk).momentum());
+	  int vtx = trackVertex(*hltVertexCollection,*hlt_trk);
+	  float dz = hlt_mu_subl.vz - (**hlt_trk).vz();
+	  //	  if (fabs(dz) > 1.0) continue;
+	  if ((fabs(dz) < 0.2) && (dR > 0.01)) cout << "    * ";
+	  else cout << "      ";
+	  cout << "pt: " << (**hlt_trk).pt() << ", eta: " << (**hlt_trk).eta() << ", phi: " << (**hlt_trk).phi()
+	       << ", vz: " << (**hlt_trk).vz() << ", vtx: " << vtx
+	       << ", nhits: " << (**hlt_trk).numberOfValidHits() << ", algo: " << (**hlt_trk).algo() 
+	       << ", dR: " << dR << endl;
+	}
 
 	//   // dump hlt pf cands near subl hlt muon
 	//   cout << "   ++++ hlt pf cands near subleading hlt muon:" << endl;
@@ -1364,21 +1373,21 @@ bool DilepTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const edm::
 	// 	 << ", nhits: " << hlt_pfcand->trackRef()->numberOfValidHits() << ", algo: " << hlt_pfcand->trackRef()->algo() 
 	// 	 << ", dR: " << dR << endl;
 
-	  // // dump off pf cands near subl hlt muon
-	  // cout << "   ++++ off pf cands near subleading hlt muon:" << endl;
-	  // PFCandidateCollection::const_iterator off_pfcands_subl_end = off_pfcands_subl.end();  // Iterator
-	  // for ( PFCandidateCollection::const_iterator off_pfcand = off_pfcands_subl.begin(); off_pfcand != off_pfcands_subl_end; ++off_pfcand ) {
-	  //   float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,off_pfcand->p4());
-	  //   int vtx = chargedHadronVertex(*vertexCollection,*off_pfcand);
-	  //   float dz = hlt_mu_lead.vz - off_pfcand->vz();
-	  //   if (fabs(dz) > 1.0) continue;
-	  //   if (((vtx == 0) || (vtx == -1)) && (off_pfcand->particleId() == 1)) cout << "    * ";
-	  //   else cout << "      ";
-	  //   cout << "pt: " << off_pfcand->pt() << ", eta: " << off_pfcand->eta() << ", phi: " << off_pfcand->phi()
-	  //        << ", id: " << off_pfcand->particleId() << ", vz: " << off_pfcand->vz() << ", vtx: " << vtx
-	  //        << ", nhits: " << off_pfcand->trackRef()->numberOfValidHits() << ", dR: " << dR << endl;
-	  // }
-	//	}
+	// dump off pf cands near subl hlt muon
+	cout << "   ++++ off pf cands near subleading hlt muon:" << endl;
+	PFCandidateCollection::const_iterator off_pfcands_subl_end = off_pfcands_subl.end();  // Iterator
+	for ( PFCandidateCollection::const_iterator off_pfcand = off_pfcands_subl.begin(); off_pfcand != off_pfcands_subl_end; ++off_pfcand ) {
+	  float dR = ROOT::Math::VectorUtil::DeltaR(hlt_mu_subl.lv,off_pfcand->p4());
+	  int vtx = chargedHadronVertex(*vertexCollection,*off_pfcand);
+	  float dz = hlt_mu_lead.vz - off_pfcand->vz();
+	  if (fabs(dz) > 1.0) continue;
+	  if (((vtx == 0) || (vtx == -1)) && (off_pfcand->particleId() == 1)) cout << "    * ";
+	  else cout << "      ";
+	  cout << "pt: " << off_pfcand->pt() << ", eta: " << off_pfcand->eta() << ", phi: " << off_pfcand->phi()
+	       << ", id: " << off_pfcand->particleId() << ", vz: " << off_pfcand->vz() << ", vtx: " << vtx
+	       << ", nhits: " << off_pfcand->trackRef()->numberOfValidHits() << ", dR: " << dR << endl;
+	}
+
 
       } // if dumpHLTPFCands
     } // if ineff
@@ -1435,15 +1444,19 @@ void DilepTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const std:
   hists_1d_["h_mll_ss"+suf] = fs->make<TH1F>(Form("h_mll_ss%s",suf.c_str()) , "; M_{ll} [GeV]" , 150 , 0. , 150. );
   hists_1d_["h_dr_ss"+suf] = fs->make<TH1F>(Form("h_dr_ss%s",suf.c_str()) , "; #DeltaR" , 600 , 0. , 6. );
 
-  hists_1d_["h_lead_abstrkiso"+suf] = fs->make<TH1F>(Form("h_lead_abstrkiso%s",suf.c_str()) , "; Leading trkiso [GeV]" , 200 , 0. , 10. );
-  hists_1d_["h_subl_abstrkiso"+suf] = fs->make<TH1F>(Form("h_subl_abstrkiso%s",suf.c_str()) , "; Subleading trkiso [GeV]" , 200 , 0. , 10. );
-  hists_1d_["h_lead_reltrkiso"+suf] = fs->make<TH1F>(Form("h_lead_reltrkiso%s",suf.c_str()) , "; Leading trkiso / p_{T}" , 200 , 0. , 2. );
-  hists_1d_["h_subl_reltrkiso"+suf] = fs->make<TH1F>(Form("h_subl_reltrkiso%s",suf.c_str()) , "; Subleading trkiso / p_{T}" , 200 , 0. , 2. );
+  hists_1d_["h_lead_abstrkiso"+suf] = fs->make<TH1F>(Form("h_lead_abstrkiso%s",suf.c_str()) , "; Leading charged pfiso [GeV]" , 200 , 0. , 10. );
+  hists_1d_["h_subl_abstrkiso"+suf] = fs->make<TH1F>(Form("h_subl_abstrkiso%s",suf.c_str()) , "; Subleading charged pfiso [GeV]" , 200 , 0. , 10. );
+  hists_1d_["h_both_abstrkiso"+suf] = fs->make<TH1F>(Form("h_both_abstrkiso%s",suf.c_str()) , "; charged pfiso [GeV]" , 200 , 0. , 10. );
+  hists_1d_["h_lead_reltrkiso"+suf] = fs->make<TH1F>(Form("h_lead_reltrkiso%s",suf.c_str()) , "; Leading charged pfiso / p_{T}" , 200 , 0. , 2. );
+  hists_1d_["h_subl_reltrkiso"+suf] = fs->make<TH1F>(Form("h_subl_reltrkiso%s",suf.c_str()) , "; Subleading charged pfiso / p_{T}" , 200 , 0. , 2. );
+  hists_1d_["h_both_reltrkiso"+suf] = fs->make<TH1F>(Form("h_both_reltrkiso%s",suf.c_str()) , "; charged pfiso / p_{T}" , 200 , 0. , 2. );
 
   hists_1d_["h_lead_abspfiso"+suf] = fs->make<TH1F>(Form("h_lead_abspfiso%s",suf.c_str()) , "; Leading pfiso [GeV]" , 200 , 0. , 10. );
   hists_1d_["h_subl_abspfiso"+suf] = fs->make<TH1F>(Form("h_subl_abspfiso%s",suf.c_str()) , "; Subleading pfiso [GeV]" , 200 , 0. , 10. );
+  hists_1d_["h_both_abspfiso"+suf] = fs->make<TH1F>(Form("h_both_abspfiso%s",suf.c_str()) , "; pfiso [GeV]" , 200 , 0. , 10. );
   hists_1d_["h_lead_relpfiso"+suf] = fs->make<TH1F>(Form("h_lead_relpfiso%s",suf.c_str()) , "; Leading pfiso / p_{T}" , 200 , 0. , 2. );
   hists_1d_["h_subl_relpfiso"+suf] = fs->make<TH1F>(Form("h_subl_relpfiso%s",suf.c_str()) , "; Subleading pfiso / p_{T}" , 200 , 0. , 2. );
+  hists_1d_["h_both_relpfiso"+suf] = fs->make<TH1F>(Form("h_both_relpfiso%s",suf.c_str()) , "; pfiso / p_{T}" , 200 , 0. , 2. );
 
   hists_1d_["h_lead_offhlt_dpt"+suf] = fs->make<TH1F>(Form("h_lead_offhlt_dpt%s",suf.c_str()) , "; Leading (p_{T}^{off} - p_{T}^{HLT}) / p_{T}^{off}" , 250 , -5. , 5. );
   hists_1d_["h_subl_offhlt_dpt"+suf] = fs->make<TH1F>(Form("h_subl_offhlt_dpt%s",suf.c_str()) , "; Subleading (p_{T}^{off} - p_{T}^{HLT}) / p_{T}^{off}" , 250 , -5. , 5. );
@@ -1523,6 +1536,18 @@ void DilepTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLepton
       hists_1d_["h_mll"+suf+hlt_suf]->Fill(dilep.M());
       float dr = ROOT::Math::VectorUtil::DeltaR(lead.lv,subl.lv);
       hists_1d_["h_dr"+suf+hlt_suf]->Fill(dr);
+      if (lead.type == 13 && subl.type == 13) {
+	hists_1d_["h_both_abstrkiso"+suf+hlt_suf]->Fill(lead.trkiso);
+	hists_1d_["h_both_abstrkiso"+suf+hlt_suf]->Fill(subl.trkiso);
+	hists_1d_["h_both_reltrkiso"+suf+hlt_suf]->Fill(lead.trkiso/lead.lv.pt());
+	hists_1d_["h_both_reltrkiso"+suf+hlt_suf]->Fill(subl.trkiso/subl.lv.pt());
+	if (!isHLT) {
+	  hists_1d_["h_both_abspfiso"+suf+hlt_suf]->Fill(lead.pfiso);
+	  hists_1d_["h_both_abspfiso"+suf+hlt_suf]->Fill(subl.pfiso);
+	  hists_1d_["h_both_relpfiso"+suf+hlt_suf]->Fill(lead.pfiso/lead.lv.pt());
+	  hists_1d_["h_both_relpfiso"+suf+hlt_suf]->Fill(subl.pfiso/subl.lv.pt());
+	}
+      }
       if (!isHLT && (lead.charge == subl.charge)) {
 	hists_1d_["h_lead_pt_ss"+suf+hlt_suf]->Fill(lead.lv.pt());
 	hists_1d_["h_lead_eta_ss"+suf+hlt_suf]->Fill(lead.lv.eta());
