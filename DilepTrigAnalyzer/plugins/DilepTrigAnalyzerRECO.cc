@@ -1536,17 +1536,18 @@ void DilepTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLepton
       hists_1d_["h_mll"+suf+hlt_suf]->Fill(dilep.M());
       float dr = ROOT::Math::VectorUtil::DeltaR(lead.lv,subl.lv);
       hists_1d_["h_dr"+suf+hlt_suf]->Fill(dr);
-      if (lead.type == 13 && subl.type == 13) {
+      // these plots make more sense than the individual leg iso plots
+      //  for comparing with the trigger, since the dilep trigger always
+      //  cuts on both legs
+      if (lead.type == 13 && subl.type == 13 && !isHLT) {
 	hists_1d_["h_both_abstrkiso"+suf+hlt_suf]->Fill(lead.trkiso);
 	hists_1d_["h_both_abstrkiso"+suf+hlt_suf]->Fill(subl.trkiso);
 	hists_1d_["h_both_reltrkiso"+suf+hlt_suf]->Fill(lead.trkiso/lead.lv.pt());
 	hists_1d_["h_both_reltrkiso"+suf+hlt_suf]->Fill(subl.trkiso/subl.lv.pt());
-	if (!isHLT) {
-	  hists_1d_["h_both_abspfiso"+suf+hlt_suf]->Fill(lead.pfiso);
-	  hists_1d_["h_both_abspfiso"+suf+hlt_suf]->Fill(subl.pfiso);
-	  hists_1d_["h_both_relpfiso"+suf+hlt_suf]->Fill(lead.pfiso/lead.lv.pt());
-	  hists_1d_["h_both_relpfiso"+suf+hlt_suf]->Fill(subl.pfiso/subl.lv.pt());
-	}
+	hists_1d_["h_both_abspfiso"+suf+hlt_suf]->Fill(lead.pfiso);
+	hists_1d_["h_both_abspfiso"+suf+hlt_suf]->Fill(subl.pfiso);
+	hists_1d_["h_both_relpfiso"+suf+hlt_suf]->Fill(lead.pfiso/lead.lv.pt());
+	hists_1d_["h_both_relpfiso"+suf+hlt_suf]->Fill(subl.pfiso/subl.lv.pt());
       }
       if (!isHLT && (lead.charge == subl.charge)) {
 	hists_1d_["h_lead_pt_ss"+suf+hlt_suf]->Fill(lead.lv.pt());
