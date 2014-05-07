@@ -30,6 +30,8 @@
 #include "DataFormats/Common/interface/ValueMap.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
@@ -110,6 +112,8 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   bool reqTrigMatch_;
   float offLeadPt_;
   float offSublPt_;
+  bool doOffGenMatch_;
+  edm::InputTag genParticlesTag_;
   bool verbose_;
 
   /// additional class data memebers
@@ -133,6 +137,7 @@ class DilepTrigAnalyzerRECO : public edm::EDAnalyzer {
   edm::Handle<reco::PFCandidateCollection> hltPFCandsGlbHandle_;
   edm::Handle<reco::PFCandidateCollection> hltPFCandsTrkHandle_;
   edm::Handle<reco::PFCandidateCollection> offPFCandsHandle_;
+  edm::Handle<reco::GenParticleCollection> genParticlesHandle_;
 
   std::map<std::string,TH1F*> hists_1d_;
   std::map<std::string,TH2F*> hists_2d_;

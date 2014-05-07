@@ -69,6 +69,8 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
   reqTrigMatch_(ps.getParameter<bool>("reqTrigMatch")),
   offLeadPt_(ps.getParameter<double>("offLeadPt")),
   offSublPt_(ps.getParameter<double>("offSublPt")),
+  doOffGenMatch_(ps.getParameter<bool>("doOffGenMatch")),
+  genParticlesTag_(ps.getParameter<edm::InputTag>("genParticles")),
   verbose_(ps.getParameter<bool>("verbose"))
 {
   using namespace std;
@@ -104,6 +106,8 @@ DilepTrigAnalyzerRECO::DilepTrigAnalyzerRECO(const edm::ParameterSet& ps) :
        << "   ReqTrigMatch = " << reqTrigMatch_ << endl
        << "   OffLeadPt = " << offLeadPt_ << endl
        << "   OffSublPt = " << offSublPt_ << endl
+       << "   DoOffGenMatch = " << doOffGenMatch_ << endl
+       << "   GenParticlesTag = " << genParticlesTag_.encode() << endl
        << "   Verbose = " << verbose_ << endl;
 
   //  hltTriggerNames_.push_back("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_v1");
@@ -275,6 +279,10 @@ DilepTrigAnalyzerRECO::analyze(const edm::Event& iEvent, const edm::EventSetup& 
     //    iEvent.getByLabel(hltPFCandsTrkTag_, hltPFCandsTrkHandle_);
     iEvent.getByLabel(offPFCandsTag_, offPFCandsHandle_);
     iEvent.getByLabel(hltVtxInputTag_, hltVertexHandle_);
+  }
+  
+  if (doOffGenMatch_) {
+    iEvent.getByLabel(genParticlesTag_, genParticlesHandle_);
   }
   
   // analyze this event for the triggers requested
