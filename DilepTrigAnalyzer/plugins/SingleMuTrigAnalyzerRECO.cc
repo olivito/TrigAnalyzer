@@ -100,6 +100,9 @@ SingleMuTrigAnalyzerRECO::SingleMuTrigAnalyzerRECO(const edm::ParameterSet& ps) 
     bookHists(fs,hltShortNames_.at(itrig)+"_tight");
     bookHists(fs,hltShortNames_.at(itrig)+"_tight_match");
     bookHists(fs,hltShortNames_.at(itrig)+"_tight_nomatch");
+    bookHists(fs,hltShortNames_.at(itrig)+"_tightiso");
+    bookHists(fs,hltShortNames_.at(itrig)+"_tightiso_match");
+    bookHists(fs,hltShortNames_.at(itrig)+"_tightiso_nomatch");
     bookHistsL1Comp(fs,hltShortNames_.at(itrig)+"_tight");
     bookHistsL1Comp(fs,hltShortNames_.at(itrig)+"_tight_match");
     bookHistsL1Comp(fs,hltShortNames_.at(itrig)+"_tight_nomatch");
@@ -529,6 +532,19 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
   bool off_mu_tight_lead_trigmatch = false;
   bool off_mu_tight_subl_trigmatch = false;
 
+  StudyLepton off_mu_tightiso_lead;
+  StudyLepton off_mu_tightiso_subl;
+  off_mu_tightiso_lead.type = 13;
+  off_mu_tightiso_subl.type = 13;
+  off_mu_tightiso_lead.isHLT = false;
+  off_mu_tightiso_subl.isHLT = false;
+  off_mu_tightiso_lead.isGen = false;
+  off_mu_tightiso_subl.isGen = false;
+  int off_mu_tightiso_lead_idx = -1;
+  int off_mu_tightiso_subl_idx = -1;
+  bool off_mu_tightiso_lead_trigmatch = false;
+  bool off_mu_tightiso_subl_trigmatch = false;
+
   MuonCollection muons_good;
   MuonCollection muons_dup;
 
@@ -659,7 +675,7 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
     // bool pass_trkiso_trig = bool(trkiso/lv.pt() < 0.4);
     float pfiso = muonPFiso(*muon);
     // bool pass_iso_loose = bool(pfiso/lv.pt() < 0.4);
-    // bool pass_iso_tight = bool(pfiso/lv.pt() < 0.15);
+    bool pass_iso_tight = bool(pfiso/lv.pt() < 0.15);
     TrackRef innerTrack = muon->innerTrack();
     int algo = 0;
     int nhits = 0;
@@ -759,11 +775,48 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
       }
     }
 
+    if (pass_tight && pass_iso_tight) {
+      // pt ordering
+      if ( (((off_mu_tightiso_lead_idx == -1) || (lv.pt() > off_mu_tightiso_lead.lv.pt())))  && (lv.pt() > offPt_) ) {
+	if (off_mu_tightiso_lead_idx != -1) {
+	  off_mu_tightiso_subl_idx = off_mu_tightiso_lead_idx;
+          off_mu_tightiso_subl_trigmatch = match;
+	  off_mu_tightiso_subl = off_mu_tightiso_lead;
+	}
+
+	off_mu_tightiso_lead_idx = (int)muonIndex;
+        off_mu_tightiso_lead_trigmatch = match;
+	off_mu_tightiso_lead.lv = lv;
+	off_mu_tightiso_lead.trkiso = trkiso;
+	off_mu_tightiso_lead.pfiso = pfiso;
+	off_mu_tightiso_lead.vz = muon->vz();
+	off_mu_tightiso_lead.charge = muon->charge();
+        off_mu_tightiso_lead.npixhits = npixhits;
+        off_mu_tightiso_lead.algo = algo;
+        off_mu_tightiso_lead.nhits = nhits;
+        off_mu_tightiso_lead.dxy = dxy;
+        off_mu_tightiso_lead.dz_hlt = dz_hlt;
+      } else if ( ((off_mu_tightiso_subl_idx == -1) || (lv.pt() > off_mu_tightiso_subl.lv.pt()))  && (lv.pt() > offPt_) ) {
+	off_mu_tightiso_subl_idx = (int)muonIndex;
+        off_mu_tightiso_subl_trigmatch = match;
+	off_mu_tightiso_subl.lv = lv;
+	off_mu_tightiso_subl.trkiso = trkiso;
+	off_mu_tightiso_subl.pfiso = pfiso;
+	off_mu_tightiso_subl.vz = muon->vz();
+        off_mu_tightiso_subl.charge = muon->charge();
+        off_mu_tightiso_subl.npixhits = npixhits;
+        off_mu_tightiso_subl.algo = algo;
+        off_mu_tightiso_subl.nhits = nhits;
+        off_mu_tightiso_subl.dxy = dxy;
+        off_mu_tightiso_subl.dz_hlt = dz_hlt;
+      }
+    }
+
 
   } // loop on duplicate-cleaned muons
 
   // dummy line to prevent errors..
-  if (off_mu_tight_subl_trigmatch && off_mu_lead_trigmatch && off_mu_subl_trigmatch) {}
+  if (off_mu_tight_subl_trigmatch && off_mu_tightiso_subl_trigmatch && off_mu_lead_trigmatch && off_mu_subl_trigmatch) {}
 
   //-------------------------------------
   //   reco lepton plots
@@ -807,7 +860,14 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
       if (compareToL1_ && l1_min_dr < 0.5) fillHistsL1Comp(off_mu_tight_lead,l1_mu_match,triggerShort+"_tight_nomatch");
     }
   } // tight
-  // fillHistsRecoHLT(off_mu_tight_lead,off_mu_tight_subl,hlt_mu_lead,hlt_mu_subl,triggerShort+"_tight");
+  if (off_mu_tightiso_lead_idx >= 0) {
+    fillHists(off_mu_tightiso_lead,off_mu_tightiso_subl,triggerShort+"_tightiso",false);
+    if (off_mu_tightiso_lead_trigmatch) {
+      fillHists(off_mu_tightiso_lead,off_mu_tightiso_subl,triggerShort+"_tightiso_match",false);
+    } else {
+      fillHists(off_mu_tightiso_lead,off_mu_tightiso_subl,triggerShort+"_tightiso_nomatch",false);
+    }
+  }
 
   // printout for cases where trigger is inefficient
   if ( verbose_ && (triggerEnum == tkmu) && (off_mu_tight_lead_idx >= 0) && !off_mu_tight_lead_trigmatch ) {
