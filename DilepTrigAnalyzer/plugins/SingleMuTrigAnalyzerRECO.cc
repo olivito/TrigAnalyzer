@@ -315,37 +315,51 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
       for (unsigned int i=0; i!=nMuons; ++i) {
 
 	float iso = -99.;
+	// TrackRef innerTrack = muonRefs_.at(i)->track();
+	// int algo = 0;
+	// int nhits = 0;
+	// int npixhits = 0;
+	// float dxy = -999.;
+	// if (innerTrack.isNonnull()) {
+	//   npixhits = innerTrack->hitPattern().numberOfValidPixelHits();
+	//   algo = innerTrack->algo();
+	//   nhits = innerTrack->numberOfValidHits();
+	//   //	  dxy = innerTrack->dxy(firstGoodVertex->position());
+	//   dxy = innerTrack->dxy();
+	// } else {
+	//   std::cout << "no valid track for trig muon!!" << std::endl;
+	// }
+
 	if (!foundMuons) {
 	  LorentzVector lv(muonRefs_.at(i)->p4());
 
 	  if ( (hlt_mu_lead_idx == -1) || (lv.pt() > hlt_mu_lead.lv.pt()) ) {
+	    hlt_mu_third = hlt_mu_subl;
 	    hlt_mu_third_idx = hlt_mu_subl_idx;
-	    hlt_mu_third.lv = hlt_mu_subl.lv;
-	    hlt_mu_third.trkiso = hlt_mu_subl.trkiso;
-	    hlt_mu_third.vz = hlt_mu_subl.vz;
-	    hlt_mu_third.charge = hlt_mu_subl.charge;
+	    hlt_mu_subl = hlt_mu_lead;
 	    hlt_mu_subl_idx = hlt_mu_lead_idx;
-	    hlt_mu_subl.lv = hlt_mu_lead.lv;
-	    hlt_mu_subl.trkiso = hlt_mu_lead.trkiso;
-	    hlt_mu_subl.vz = hlt_mu_lead.vz;
-	    hlt_mu_subl.charge = hlt_mu_lead.charge;
 	    hlt_mu_lead_idx = (int)i;
 	    hlt_mu_lead.lv = lv;
 	    hlt_mu_lead.trkiso = iso;
 	    hlt_mu_lead.vz = muonRefs_.at(i)->vz();
 	    hlt_mu_lead.charge = muonRefs_.at(i)->charge();
+	    // hlt_mu_lead.npixhits = npixhits;
+	    // hlt_mu_lead.algo = algo;
+	    // hlt_mu_lead.nhits = nhits;
+	    // hlt_mu_lead.dxy = dxy;
 	  } else if ( (hlt_mu_subl_idx == -1) || (lv.pt() > hlt_mu_subl.lv.pt()) ) {
 	    if (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,lv) > 0.001) {
+  	      hlt_mu_third = hlt_mu_subl;
 	      hlt_mu_third_idx = hlt_mu_subl_idx;
-	      hlt_mu_third.lv = hlt_mu_subl.lv;
-	      hlt_mu_third.trkiso = hlt_mu_subl.trkiso;
-	      hlt_mu_third.vz = hlt_mu_subl.vz;
-	      hlt_mu_third.charge = hlt_mu_subl.charge;
 	      hlt_mu_subl_idx = (int)i;
 	      hlt_mu_subl.lv = lv;
 	      hlt_mu_subl.trkiso = iso;
 	      hlt_mu_subl.vz = muonRefs_.at(i)->vz();
 	      hlt_mu_subl.charge = muonRefs_.at(i)->charge();
+	      // hlt_mu_subl.npixhits = npixhits;
+	      // hlt_mu_subl.algo = algo;
+	      // hlt_mu_subl.nhits = nhits;
+	      // hlt_mu_subl.dxy = dxy;
 	    }
 	  } else if ( (hlt_mu_third_idx == -1) || (lv.pt() > hlt_mu_third.lv.pt()) ) {
 	    if ( (ROOT::Math::VectorUtil::DeltaR(hlt_mu_lead.lv,lv) > 0.001) &&
@@ -355,6 +369,10 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
 	      hlt_mu_third.trkiso = iso;
 	      hlt_mu_third.vz = muonRefs_.at(i)->vz();
   	      hlt_mu_third.charge = muonRefs_.at(i)->charge();
+	      // hlt_mu_third.npixhits = npixhits;
+	      // hlt_mu_third.algo = algo;
+	      // hlt_mu_third.nhits = nhits;
+	      // hlt_mu_third.dxy = dxy;
 	    }
 	  }
 	} // if !foundMuons
@@ -679,12 +697,14 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
     TrackRef innerTrack = muon->innerTrack();
     int algo = 0;
     int nhits = 0;
+    int nlosthits = 0;
     int npixhits = 0;
     float dxy = -999.;
     if (innerTrack.isNonnull()) {
       npixhits = innerTrack->hitPattern().numberOfValidPixelHits();
       algo = innerTrack->algo();
       nhits = innerTrack->numberOfValidHits();
+      nlosthits = innerTrack->numberOfLostHits();
       dxy = innerTrack->dxy(firstGoodVertex->position());
     }
     float dz_hlt = -999.;
@@ -721,6 +741,7 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
       off_mu_lead.npixhits = npixhits;
       off_mu_lead.algo = algo;
       off_mu_lead.nhits = nhits;
+      off_mu_lead.nlosthits = nlosthits;
       off_mu_lead.dxy = dxy;
       off_mu_lead.dz_hlt = dz_hlt;
     } else if ( ((off_mu_subl_idx == -1) || (lv.pt() > off_mu_subl.lv.pt())) && (lv.pt() > offPt_) ) {
@@ -734,6 +755,7 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
       off_mu_subl.npixhits = npixhits;
       off_mu_subl.algo = algo;
       off_mu_subl.nhits = nhits;
+      off_mu_subl.nlosthits = nlosthits;
       off_mu_subl.dxy = dxy;
       off_mu_subl.dz_hlt = dz_hlt;
     }
@@ -757,6 +779,7 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
         off_mu_tight_lead.npixhits = npixhits;
         off_mu_tight_lead.algo = algo;
         off_mu_tight_lead.nhits = nhits;
+        off_mu_tight_lead.nlosthits = nlosthits;
         off_mu_tight_lead.dxy = dxy;
         off_mu_tight_lead.dz_hlt = dz_hlt;
       } else if ( ((off_mu_tight_subl_idx == -1) || (lv.pt() > off_mu_tight_subl.lv.pt()))  && (lv.pt() > offPt_) ) {
@@ -770,6 +793,7 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
         off_mu_tight_subl.npixhits = npixhits;
         off_mu_tight_subl.algo = algo;
         off_mu_tight_subl.nhits = nhits;
+        off_mu_tight_subl.nlosthits = nlosthits;
         off_mu_tight_subl.dxy = dxy;
         off_mu_tight_subl.dz_hlt = dz_hlt;
       }
@@ -794,6 +818,7 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
         off_mu_tightiso_lead.npixhits = npixhits;
         off_mu_tightiso_lead.algo = algo;
         off_mu_tightiso_lead.nhits = nhits;
+        off_mu_tightiso_lead.nlosthits = nlosthits;
         off_mu_tightiso_lead.dxy = dxy;
         off_mu_tightiso_lead.dz_hlt = dz_hlt;
       } else if ( ((off_mu_tightiso_subl_idx == -1) || (lv.pt() > off_mu_tightiso_subl.lv.pt()))  && (lv.pt() > offPt_) ) {
@@ -807,6 +832,7 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
         off_mu_tightiso_subl.npixhits = npixhits;
         off_mu_tightiso_subl.algo = algo;
         off_mu_tightiso_subl.nhits = nhits;
+        off_mu_tightiso_subl.nlosthits = nlosthits;
         off_mu_tightiso_subl.dxy = dxy;
         off_mu_tightiso_subl.dz_hlt = dz_hlt;
       }
@@ -950,6 +976,8 @@ void SingleMuTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const s
   hists_1d_["h_subl_algo"+suf] = fs->make<TH1F>(Form("h_subl_algo%s",suf.c_str()) , "; Subleading track algo" , 15 , -0.5 , 14.5 );
   hists_1d_["h_lead_nhits"+suf] = fs->make<TH1F>(Form("h_lead_nhits%s",suf.c_str()) , "; Leading N(hits)" , 25 , -0.5 , 24.5 );
   hists_1d_["h_subl_nhits"+suf] = fs->make<TH1F>(Form("h_subl_nhits%s",suf.c_str()) , "; Subleading N(hits)" , 25 , -0.5 , 24.5 );
+  hists_1d_["h_lead_nlosthits"+suf] = fs->make<TH1F>(Form("h_lead_nlosthits%s",suf.c_str()) , "; Leading N(lost hits)" , 5 , -0.5 , 4.5 );
+  hists_1d_["h_subl_nlosthits"+suf] = fs->make<TH1F>(Form("h_subl_nlosthits%s",suf.c_str()) , "; Subleading N(lost hits)" , 5 , -0.5 , 4.5 );
   hists_1d_["h_lead_dxy"+suf] = fs->make<TH1F>(Form("h_lead_dxy%s",suf.c_str()) , "; Leading dxy wrt vertex" , 100 , -0.2 , 0.2 );
   hists_1d_["h_subl_dxy"+suf] = fs->make<TH1F>(Form("h_subl_dxy%s",suf.c_str()) , "; Subleading dxy wrt vertex" , 100 , -0.2 , 0.2 );
   hists_1d_["h_lead_dz_hlt"+suf] = fs->make<TH1F>(Form("h_lead_dz_hlt%s",suf.c_str()) , "; Leading dz wrt hlt vertex" , 100 , -20 , 20 );
@@ -1024,6 +1052,7 @@ void SingleMuTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLep
     hists_1d_["h_lead_npixhits"+suf+hlt_suf]->Fill(lead.npixhits);
     hists_1d_["h_lead_algo"+suf+hlt_suf]->Fill(lead.algo);
     hists_1d_["h_lead_nhits"+suf+hlt_suf]->Fill(lead.nhits);
+    hists_1d_["h_lead_nlosthits"+suf+hlt_suf]->Fill(lead.nlosthits);
     hists_1d_["h_lead_dxy"+suf+hlt_suf]->Fill(lead.dxy);
     hists_1d_["h_lead_dz_hlt"+suf+hlt_suf]->Fill(lead.dz_hlt);
     hists_1d_["h_nvtx"+suf+hlt_suf]->Fill(nvtx_);
@@ -1043,6 +1072,7 @@ void SingleMuTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLep
     hists_1d_["h_subl_npixhits"+suf+hlt_suf]->Fill(subl.npixhits);
     hists_1d_["h_subl_algo"+suf+hlt_suf]->Fill(subl.algo);
     hists_1d_["h_subl_nhits"+suf+hlt_suf]->Fill(subl.nhits);
+    hists_1d_["h_subl_nlosthits"+suf+hlt_suf]->Fill(subl.nlosthits);
     hists_1d_["h_subl_dxy"+suf+hlt_suf]->Fill(subl.dxy);
     hists_1d_["h_subl_dz_hlt"+suf+hlt_suf]->Fill(subl.dz_hlt);
 

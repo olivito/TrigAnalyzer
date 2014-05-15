@@ -62,6 +62,7 @@ class SingleMuTrigAnalyzerRECO : public edm::EDAnalyzer {
     int nhits;
     float dxy;
     float dz_hlt;
+    int nlosthits;
   };
 
  public:
