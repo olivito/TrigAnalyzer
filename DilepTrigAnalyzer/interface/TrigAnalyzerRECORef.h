@@ -77,8 +77,9 @@ class TrigAnalyzerRECORef : public edm::EDAnalyzer {
   edm::InputTag muonsInputTag_;
   edm::InputTag vtxInputTag_;
   bool reqTrigMatch_;
-  float offLeadPt_;
-  float offSublPt_;
+  std::vector<double> offPt_;
+  bool offTight_;
+  double offDxy_;
   bool doOffGenMatch_;
   edm::InputTag genParticlesTag_;
   bool verbose_;

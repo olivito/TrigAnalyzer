@@ -48,8 +48,9 @@ TrigAnalyzerRECORef::TrigAnalyzerRECORef(const edm::ParameterSet& ps) :
   electronsInputTag_(ps.getParameter<edm::InputTag>("electronsInputTag")),
   muonsInputTag_(ps.getParameter<edm::InputTag>("muonsInputTag")),
   vtxInputTag_(ps.getParameter<edm::InputTag>("vtxInputTag")),
-  offLeadPt_(ps.getParameter<double>("offLeadPt")),
-  offSublPt_(ps.getParameter<double>("offSublPt")),
+  offPt_(ps.getParameter<std::vector<double> >("offPt")),
+  offTight_(ps.getParameter<bool>("offTight")),
+  offDxy_(ps.getParameter<double>("offDxy")),
   doOffGenMatch_(ps.getParameter<bool>("doOffGenMatch")),
   genParticlesTag_(ps.getParameter<edm::InputTag>("genParticles")),
   verbose_(ps.getParameter<bool>("verbose"))
@@ -74,8 +75,13 @@ TrigAnalyzerRECORef::TrigAnalyzerRECORef(const edm::ParameterSet& ps) :
        << "   ElectronsInputTag = " << electronsInputTag_.encode() << endl
        << "   MuonsInputTag = " << muonsInputTag_.encode() << endl
        << "   VtxInputTag = " << vtxInputTag_.encode() << endl
-       << "   OffLeadPt = " << offLeadPt_ << endl
-       << "   OffSublPt = " << offSublPt_ << endl
+       << "   OffPt = ";
+  for (unsigned int i=0; i<offPt_.size(); ++i) {
+    cout << offPt_.at(i) << ", ";
+  }
+  cout << endl
+       << "   OffTight = " << offTight_ << endl
+       << "   OffDxy = " << offDxy_ << endl
        << "   DoOffGenMatch = " << doOffGenMatch_ << endl
        << "   GenParticlesTag = " << genParticlesTag_.encode() << endl
        << "   Verbose = " << verbose_ << endl;
@@ -90,8 +96,8 @@ TrigAnalyzerRECORef::TrigAnalyzerRECORef(const edm::ParameterSet& ps) :
   edm::Service<TFileService> fs;
   // unsigned int bitsize = 2**(triggerNames_.size());
   // h_results_ = fs->make<TH1F>("h_results_" , ";Trigger Results" , bitsize , -0.5 , float(bitsize)-0.5 );
-  bookHists(fs);
   for (unsigned int itrig=0; itrig < triggerNames_.size(); ++itrig) {
+    bookHists(fs,triggerNamesShort_.at(itrig));
     bookHists(fs,triggerNamesShort_.at(itrig)+"_match");
     bookHists(fs,triggerNamesShort_.at(itrig)+"_match_onZ");
     bookHists(fs,triggerNamesShort_.at(itrig)+"_match_offZ");
@@ -233,7 +239,7 @@ TrigAnalyzerRECORef::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
     }
 
     // min pt cut
-    if (muon->pt() < offSublPt_) {
+    if (muon->pt() < 5.) {
       // if (verbose_) cout << ", FAILS pt" << std::endl;
       continue;
     }
@@ -247,7 +253,6 @@ TrigAnalyzerRECORef::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
 
     // check tight muon ID, require here
     bool pass_tight_1 = muon::isTightMuon(*muon,*firstGoodVertex);
-    if (!pass_tight_1) continue;
 
     // // check for duplicate muons using dR 0.1
     duplicate = false;
@@ -325,17 +330,33 @@ TrigAnalyzerRECORef::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
   for ( MuonCollection::const_iterator muon = muons_good.begin(); muon != muons_end; ++muon, ++muonIndex ) {
     LorentzVector lv(muon->p4());
 
-    fillHists(*muon);
+    bool pass_tight = muon::isTightMuon(*muon,*firstGoodVertex);
+    if (offTight_ && !pass_tight) continue;
+
+    if (offDxy_ > 0.) {
+      const TrackRef siTrack  = muon->innerTrack();
+      float dxy = -999.;
+      if ( siTrack.isNonnull() && firstGoodVertex != vertexCollection->end() ) {
+	dxy = siTrack->dxy(firstGoodVertex->position());
+        if (fabs(dxy) > offDxy_) continue;
+      } else {
+	std::cout << "WARNING: problem with muon inner track!!" << std::endl;
+      }
+    }
+
 
     for (unsigned int itrig = 0; itrig < triggerNames_.size(); ++itrig) {
+      const std::string nameShort(triggerNamesShort_.at(itrig));
       bool match = false;
+      // check min pt for this trig
+      if (muon->pt() < offPt_.at(itrig)) continue;
+      fillHists(*muon,nameShort);
       for (unsigned int itmu = 0; itmu < triggersMuons.at(itrig).size(); ++itmu) {
 	if (ROOT::Math::VectorUtil::DeltaR(lv,triggersMuons.at(itrig).at(itmu)->p4()) < dr_trigmatch) {
 	  match = true;
 	  break;
 	}
       } // loop over trig muons
-      const std::string nameShort(triggerNamesShort_.at(itrig));
       if (match) {
 	fillHists(*muon,nameShort+"_match");
 	if (onZ) fillHists(*muon,nameShort+"_match_onZ");
