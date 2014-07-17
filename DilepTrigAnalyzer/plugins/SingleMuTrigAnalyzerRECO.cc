@@ -97,15 +97,22 @@ SingleMuTrigAnalyzerRECO::SingleMuTrigAnalyzerRECO(const edm::ParameterSet& ps) 
     bookHistsGen(fs,hltShortNames_.at(itrig)+"_gen");
     bookHistsGen(fs,hltShortNames_.at(itrig)+"_gen_match");
     bookHistsGen(fs,hltShortNames_.at(itrig)+"_gen_nomatch");
+    bookHists(fs,hltShortNames_.at(itrig)+"_loose");
+    bookHists(fs,hltShortNames_.at(itrig)+"_loose_match");
+    bookHists(fs,hltShortNames_.at(itrig)+"_loose_nomatch");
     bookHists(fs,hltShortNames_.at(itrig)+"_tight");
     bookHists(fs,hltShortNames_.at(itrig)+"_tight_match");
+    bookHists(fs,hltShortNames_.at(itrig)+"_tight_match_centphi");
     bookHists(fs,hltShortNames_.at(itrig)+"_tight_nomatch");
+    bookHists(fs,hltShortNames_.at(itrig)+"_tight_nomatch_centphi");
     bookHists(fs,hltShortNames_.at(itrig)+"_tightiso");
     bookHists(fs,hltShortNames_.at(itrig)+"_tightiso_match");
     bookHists(fs,hltShortNames_.at(itrig)+"_tightiso_nomatch");
     bookHistsL1Comp(fs,hltShortNames_.at(itrig)+"_tight");
     bookHistsL1Comp(fs,hltShortNames_.at(itrig)+"_tight_match");
+    bookHistsL1Comp(fs,hltShortNames_.at(itrig)+"_tight_match_centphi");
     bookHistsL1Comp(fs,hltShortNames_.at(itrig)+"_tight_nomatch");
+    bookHistsL1Comp(fs,hltShortNames_.at(itrig)+"_tight_nomatch_centphi");
   }
 
 }
@@ -537,6 +544,19 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
   bool off_mu_lead_trigmatch = false;
   bool off_mu_subl_trigmatch = false;
 
+  StudyLepton off_mu_loose_lead;
+  StudyLepton off_mu_loose_subl;
+  off_mu_loose_lead.type = 13;
+  off_mu_loose_subl.type = 13;
+  off_mu_loose_lead.isHLT = false;
+  off_mu_loose_subl.isHLT = false;
+  off_mu_loose_lead.isGen = false;
+  off_mu_loose_subl.isGen = false;
+  int off_mu_loose_lead_idx = -1;
+  int off_mu_loose_subl_idx = -1;
+  bool off_mu_loose_lead_trigmatch = false;
+  bool off_mu_loose_subl_trigmatch = false;
+
   StudyLepton off_mu_tight_lead;
   StudyLepton off_mu_tight_subl;
   off_mu_tight_lead.type = 13;
@@ -687,7 +707,7 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
   for ( MuonCollection::const_iterator muon = muons_good.begin(); muon != muons_end; ++muon, ++muonIndex ) {
     LorentzVector lv(muon->p4());
 
-    //    bool pass_loose = muon::isLooseMuon(*muon);
+    bool pass_loose = muon::isLooseMuon(*muon);
     bool pass_tight = muon::isTightMuon(*muon,*firstGoodVertex);
     float trkiso = muon->pfIsolationR03().sumChargedHadronPt;
     // bool pass_trkiso_trig = bool(trkiso/lv.pt() < 0.4);
@@ -758,6 +778,45 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
       off_mu_subl.nlosthits = nlosthits;
       off_mu_subl.dxy = dxy;
       off_mu_subl.dz_hlt = dz_hlt;
+    }
+
+    if (pass_loose) {
+      // pt ordering
+      if ( (((off_mu_loose_lead_idx == -1) || (lv.pt() > off_mu_loose_lead.lv.pt())))  && (lv.pt() > offPt_) ) {
+	if (off_mu_loose_lead_idx != -1) {
+	  off_mu_loose_subl_idx = off_mu_loose_lead_idx;
+          off_mu_loose_subl_trigmatch = match;
+	  off_mu_loose_subl = off_mu_loose_lead;
+	}
+
+	off_mu_loose_lead_idx = (int)muonIndex;
+        off_mu_loose_lead_trigmatch = match;
+	off_mu_loose_lead.lv = lv;
+	off_mu_loose_lead.trkiso = trkiso;
+	off_mu_loose_lead.pfiso = pfiso;
+	off_mu_loose_lead.vz = muon->vz();
+	off_mu_loose_lead.charge = muon->charge();
+        off_mu_loose_lead.npixhits = npixhits;
+        off_mu_loose_lead.algo = algo;
+        off_mu_loose_lead.nhits = nhits;
+        off_mu_loose_lead.nlosthits = nlosthits;
+        off_mu_loose_lead.dxy = dxy;
+        off_mu_loose_lead.dz_hlt = dz_hlt;
+      } else if ( ((off_mu_loose_subl_idx == -1) || (lv.pt() > off_mu_loose_subl.lv.pt()))  && (lv.pt() > offPt_) ) {
+	off_mu_loose_subl_idx = (int)muonIndex;
+        off_mu_loose_subl_trigmatch = match;
+	off_mu_loose_subl.lv = lv;
+	off_mu_loose_subl.trkiso = trkiso;
+	off_mu_loose_subl.pfiso = pfiso;
+	off_mu_loose_subl.vz = muon->vz();
+        off_mu_loose_subl.charge = muon->charge();
+        off_mu_loose_subl.npixhits = npixhits;
+        off_mu_loose_subl.algo = algo;
+        off_mu_loose_subl.nhits = nhits;
+        off_mu_loose_subl.nlosthits = nlosthits;
+        off_mu_loose_subl.dxy = dxy;
+        off_mu_loose_subl.dz_hlt = dz_hlt;
+      }
     }
 
     if (pass_tight) {
@@ -842,7 +901,7 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
   } // loop on duplicate-cleaned muons
 
   // dummy line to prevent errors..
-  if (off_mu_tight_subl_trigmatch && off_mu_tightiso_subl_trigmatch && off_mu_lead_trigmatch && off_mu_subl_trigmatch) {}
+  if (off_mu_tight_subl_trigmatch && off_mu_tightiso_subl_trigmatch && off_mu_lead_trigmatch && off_mu_loose_subl_trigmatch && off_mu_lead_trigmatch && off_mu_subl_trigmatch) {}
 
   //-------------------------------------
   //   reco lepton plots
@@ -850,6 +909,15 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
 
   // no offline sel
   fillHists(off_mu_lead,off_mu_subl,triggerShort,false);
+  // offline loose
+  if (off_mu_loose_lead_idx >= 0) {
+    fillHists(off_mu_loose_lead,off_mu_loose_subl,triggerShort+"_loose",false);
+    if (off_mu_loose_lead_trigmatch) {
+      fillHists(off_mu_loose_lead,off_mu_loose_subl,triggerShort+"_loose_match",false);
+    } else {
+      fillHists(off_mu_loose_lead,off_mu_loose_subl,triggerShort+"_loose_nomatch",false);
+    }
+  }
   // offline tight
   if (off_mu_tight_lead_idx >= 0) {
     fillHists(off_mu_tight_lead,off_mu_tight_subl,triggerShort+"_tight",false);
@@ -880,10 +948,26 @@ bool SingleMuTrigAnalyzerRECO::analyzeTrigger(const edm::Event& iEvent, const ed
 
     if (off_mu_tight_lead_trigmatch) {
       fillHists(off_mu_tight_lead,off_mu_tight_subl,triggerShort+"_tight_match",false);
-      if (compareToL1_ && l1_min_dr < 0.5) fillHistsL1Comp(off_mu_tight_lead,l1_mu_match,triggerShort+"_tight_match");
+      if (off_mu_tight_lead.lv.phi() > -0.4 && off_mu_tight_lead.lv.phi() < 0.2) {
+	fillHists(off_mu_tight_lead,off_mu_tight_subl,triggerShort+"_tight_match_centphi",false);
+      }
+      if (compareToL1_ && l1_min_dr < 0.5) {
+	fillHistsL1Comp(off_mu_tight_lead,l1_mu_match,triggerShort+"_tight_match");
+	if (off_mu_tight_lead.lv.phi() > -0.4 && off_mu_tight_lead.lv.phi() < 0.2) {
+	  fillHistsL1Comp(off_mu_tight_lead,l1_mu_match,triggerShort+"_tight_match_centphi");
+	}
+      }
     } else {
       fillHists(off_mu_tight_lead,off_mu_tight_subl,triggerShort+"_tight_nomatch",false);
-      if (compareToL1_ && l1_min_dr < 0.5) fillHistsL1Comp(off_mu_tight_lead,l1_mu_match,triggerShort+"_tight_nomatch");
+      if (off_mu_tight_lead.lv.phi() > -0.4 && off_mu_tight_lead.lv.phi() < 0.2) {
+	fillHists(off_mu_tight_lead,off_mu_tight_subl,triggerShort+"_tight_nomatch_centphi",false);
+      }
+      if (compareToL1_ && l1_min_dr < 0.5) {
+	fillHistsL1Comp(off_mu_tight_lead,l1_mu_match,triggerShort+"_tight_nomatch");
+	if (off_mu_tight_lead.lv.phi() > -0.4 && off_mu_tight_lead.lv.phi() < 0.2) {
+	  fillHistsL1Comp(off_mu_tight_lead,l1_mu_match,triggerShort+"_tight_nomatch_centphi");
+	}
+      }
     }
   } // tight
   if (off_mu_tightiso_lead_idx >= 0) {
@@ -966,10 +1050,13 @@ void SingleMuTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const s
 
   hists_1d_["h_nlep_off"+suf] = fs->make<TH1F>(Form("h_nlep_off%s",suf.c_str()) , "; Offline N(lep)" , 3 , -0.5 , 2.5 );
 
+  float pi = TMath::Pi();
   hists_1d_["h_lead_pt"+suf] = fs->make<TH1F>(Form("h_lead_pt%s",suf.c_str()) , "; Leading p_{T} [GeV]" , 100 , 0. , 100. );
   hists_1d_["h_subl_pt"+suf] = fs->make<TH1F>(Form("h_subl_pt%s",suf.c_str()) , "; Subleading p_{T} [GeV]" , 100 , 0. , 100. );
   hists_1d_["h_lead_eta"+suf] = fs->make<TH1F>(Form("h_lead_eta%s",suf.c_str()) , "; Leading #eta" , 100 , -3. , 3. );
   hists_1d_["h_subl_eta"+suf] = fs->make<TH1F>(Form("h_subl_eta%s",suf.c_str()) , "; Subleading #eta" , 100 , -3. , 3. );
+  hists_1d_["h_lead_phi"+suf] = fs->make<TH1F>(Form("h_lead_phi%s",suf.c_str()) , "; Leading #phi" , 100 , -pi , pi );
+  hists_1d_["h_subl_phi"+suf] = fs->make<TH1F>(Form("h_subl_phi%s",suf.c_str()) , "; Subleading #phi" , 100 , -pi , pi );
   hists_1d_["h_lead_npixhits"+suf] = fs->make<TH1F>(Form("h_lead_npixhits%s",suf.c_str()) , "; Leading N(pix hits)" , 5 , -0.5 , 4.5 );
   hists_1d_["h_subl_npixhits"+suf] = fs->make<TH1F>(Form("h_subl_npixhits%s",suf.c_str()) , "; Subleading N(pix hits)" , 5 , -0.5 , 4.5 );
   hists_1d_["h_lead_algo"+suf] = fs->make<TH1F>(Form("h_lead_algo%s",suf.c_str()) , "; Leading track algo" , 15 , -0.5 , 14.5 );
@@ -985,6 +1072,8 @@ void SingleMuTrigAnalyzerRECO::bookHists(edm::Service<TFileService>& fs, const s
   hists_1d_["h_mll"+suf] = fs->make<TH1F>(Form("h_mll%s",suf.c_str()) , "; M_{ll} [GeV]" , 150 , 0. , 150. );
   hists_1d_["h_dr"+suf] = fs->make<TH1F>(Form("h_dr%s",suf.c_str()) , "; #DeltaR" , 600 , 0. , 6. );
   hists_1d_["h_nvtx"+suf] = fs->make<TH1F>(Form("h_nvtx%s",suf.c_str()) , "; N(vtx)" , 60 , -0.5 , 59.5 );
+
+  hists_2d_["h_lead_etaphi"+suf] = fs->make<TH2F>(Form("h_lead_etaphi%s",suf.c_str()) , "; #eta ; #phi" , 100 , -3. , 3., 100, -pi, pi );
 
   // hists_1d_["h_lead_pt_os"+suf] = fs->make<TH1F>(Form("h_lead_pt_os%s",suf.c_str()) , "; Leading p_{T} [GeV]" , 100 , 0. , 100. );
   // hists_1d_["h_subl_pt_os"+suf] = fs->make<TH1F>(Form("h_subl_pt_os%s",suf.c_str()) , "; Subleading p_{T} [GeV]" , 100 , 0. , 100. );
@@ -1049,6 +1138,7 @@ void SingleMuTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLep
   if (lead.lv.pt() > 0) {
     hists_1d_["h_lead_pt"+suf+hlt_suf]->Fill(lead.lv.pt());
     hists_1d_["h_lead_eta"+suf+hlt_suf]->Fill(lead.lv.eta());
+    hists_1d_["h_lead_phi"+suf+hlt_suf]->Fill(lead.lv.phi());
     hists_1d_["h_lead_npixhits"+suf+hlt_suf]->Fill(lead.npixhits);
     hists_1d_["h_lead_algo"+suf+hlt_suf]->Fill(lead.algo);
     hists_1d_["h_lead_nhits"+suf+hlt_suf]->Fill(lead.nhits);
@@ -1056,6 +1146,7 @@ void SingleMuTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLep
     hists_1d_["h_lead_dxy"+suf+hlt_suf]->Fill(lead.dxy);
     hists_1d_["h_lead_dz_hlt"+suf+hlt_suf]->Fill(lead.dz_hlt);
     hists_1d_["h_nvtx"+suf+hlt_suf]->Fill(nvtx_);
+    hists_2d_["h_lead_etaphi"+suf+hlt_suf]->Fill(lead.lv.eta(),lead.lv.phi());
     // if (lead.type == 13) {
     //   hists_1d_["h_lead_abstrkiso"+suf+hlt_suf]->Fill(lead.trkiso);
     //   hists_1d_["h_lead_reltrkiso"+suf+hlt_suf]->Fill(lead.trkiso/lead.lv.pt());
@@ -1069,6 +1160,7 @@ void SingleMuTrigAnalyzerRECO::fillHists(const StudyLepton& lead, const StudyLep
   if (subl.lv.pt() > 0) {
     hists_1d_["h_subl_pt"+suf+hlt_suf]->Fill(subl.lv.pt());
     hists_1d_["h_subl_eta"+suf+hlt_suf]->Fill(subl.lv.eta());
+    hists_1d_["h_subl_phi"+suf+hlt_suf]->Fill(subl.lv.phi());
     hists_1d_["h_subl_npixhits"+suf+hlt_suf]->Fill(subl.npixhits);
     hists_1d_["h_subl_algo"+suf+hlt_suf]->Fill(subl.algo);
     hists_1d_["h_subl_nhits"+suf+hlt_suf]->Fill(subl.nhits);
