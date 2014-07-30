@@ -32,6 +32,8 @@
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
+#include "DataFormats/L1Trigger/interface/L1MuonParticle.h"
+#include "DataFormats/L1Trigger/interface/L1MuonParticleFwd.h"
 
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
@@ -78,10 +80,15 @@ class TrigAnalyzerRECORef : public edm::EDAnalyzer {
   edm::InputTag vtxInputTag_;
   bool reqTrigMatch_;
   std::vector<double> offPt_;
+  double offEta_;
   bool offTight_;
   double offDxy_;
+  double offIso_;
   bool doOffGenMatch_;
   edm::InputTag genParticlesTag_;
+  bool doOffL1Match_;
+  edm::InputTag l1MuonsTag_;
+  bool doZWindow_;
   bool verbose_;
 
   /// additional class data memebers
@@ -93,11 +100,13 @@ class TrigAnalyzerRECORef : public edm::EDAnalyzer {
   edm::Handle<reco::GsfElectronCollection> elsHandle_;
   edm::Handle<reco::MuonCollection> musHandle_;
   edm::Handle<reco::GenParticleCollection> genParticlesHandle_;
+  edm::Handle<l1extra::L1MuonParticleCollection> l1MuonsHandle_;
 
   std::map<std::string,TH1F*> hists_1d_;
   std::map<std::string,TH2F*> hists_2d_;
 
   unsigned int trigpass_results_;
 
+  reco::VertexCollection::const_iterator firstGoodVertex_;
 };
 #endif

@@ -19,6 +19,7 @@
 #include "DataFormats/MuonReco/interface/MuonSelectors.h"
 #include "DataFormats/EgammaCandidates/interface/Electron.h"
 #include "DataFormats/RecoCandidate/interface/RecoChargedCandidate.h"
+#include "DataFormats/L1GlobalMuonTrigger/interface/L1MuGMTExtendedCand.h"
 
 #include "TrackingTools/IPTools/interface/IPTools.h"
 #include "TrackingTools/TransientTrack/interface/TransientTrack.h"
@@ -34,6 +35,7 @@
 
 using namespace reco;
 using namespace edm;
+using namespace l1extra;
 
 //
 // constructors and destructor
@@ -49,10 +51,15 @@ TrigAnalyzerRECORef::TrigAnalyzerRECORef(const edm::ParameterSet& ps) :
   muonsInputTag_(ps.getParameter<edm::InputTag>("muonsInputTag")),
   vtxInputTag_(ps.getParameter<edm::InputTag>("vtxInputTag")),
   offPt_(ps.getParameter<std::vector<double> >("offPt")),
+  offEta_(ps.getParameter<double>("offEta")),
   offTight_(ps.getParameter<bool>("offTight")),
   offDxy_(ps.getParameter<double>("offDxy")),
+  offIso_(ps.getParameter<double>("offIso")),
   doOffGenMatch_(ps.getParameter<bool>("doOffGenMatch")),
   genParticlesTag_(ps.getParameter<edm::InputTag>("genParticles")),
+  doOffL1Match_(ps.getParameter<bool>("doOffL1Match")),
+  l1MuonsTag_(ps.getParameter<edm::InputTag>("l1Muons")),
+  doZWindow_(ps.getParameter<bool>("doZWindow")),
   verbose_(ps.getParameter<bool>("verbose"))
 {
   using namespace std;
@@ -80,10 +87,15 @@ TrigAnalyzerRECORef::TrigAnalyzerRECORef(const edm::ParameterSet& ps) :
     cout << offPt_.at(i) << ", ";
   }
   cout << endl
+       << "   OffEta = " << offEta_ << endl
        << "   OffTight = " << offTight_ << endl
        << "   OffDxy = " << offDxy_ << endl
+       << "   OffIso = " << offIso_ << endl
        << "   DoOffGenMatch = " << doOffGenMatch_ << endl
        << "   GenParticlesTag = " << genParticlesTag_.encode() << endl
+       << "   DoOffL1Match = " << doOffL1Match_ << endl
+       << "   L1MuonsTag = " << l1MuonsTag_.encode() << endl
+       << "   DoZWindow = " << doZWindow_ << endl
        << "   Verbose = " << verbose_ << endl;
 
   if (triggerNames_.size() == 0) {
@@ -99,11 +111,15 @@ TrigAnalyzerRECORef::TrigAnalyzerRECORef(const edm::ParameterSet& ps) :
   for (unsigned int itrig=0; itrig < triggerNames_.size(); ++itrig) {
     bookHists(fs,triggerNamesShort_.at(itrig));
     bookHists(fs,triggerNamesShort_.at(itrig)+"_match");
-    bookHists(fs,triggerNamesShort_.at(itrig)+"_match_onZ");
-    bookHists(fs,triggerNamesShort_.at(itrig)+"_match_offZ");
+    if (doZWindow_) {
+      bookHists(fs,triggerNamesShort_.at(itrig)+"_match_onZ");
+      bookHists(fs,triggerNamesShort_.at(itrig)+"_match_offZ");
+    }
     bookHists(fs,triggerNamesShort_.at(itrig)+"_nomatch");
-    bookHists(fs,triggerNamesShort_.at(itrig)+"_nomatch_onZ");
-    bookHists(fs,triggerNamesShort_.at(itrig)+"_nomatch_offZ");
+    if (doZWindow_) {
+      bookHists(fs,triggerNamesShort_.at(itrig)+"_nomatch_onZ");
+      bookHists(fs,triggerNamesShort_.at(itrig)+"_nomatch_offZ");
+    }
   }
 
 }
@@ -178,6 +194,10 @@ TrigAnalyzerRECORef::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
     iEvent.getByLabel(genParticlesTag_, genParticlesHandle_);
   }
 
+  if (doOffL1Match_) {
+    iEvent.getByLabel(l1MuonsTag_, l1MuonsHandle_);
+  }
+
   //----------------------------------------------------------------------------------------------------
   //----------------------------------------------------------------------------------------------------
   //   analyze event
@@ -190,15 +210,15 @@ TrigAnalyzerRECORef::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
 
   // find vertex 0 in vertex container
   const VertexCollection* vertexCollection = vertexHandle_.product();
-  VertexCollection::const_iterator firstGoodVertex = vertexCollection->end();
+  firstGoodVertex_ = vertexCollection->end();
   for ( VertexCollection::const_iterator vtx = vertexCollection->begin(); vtx != vertexCollection->end(); ++vtx ) {
     if (  !vtx->isFake() && vtx->ndof()>=4. && vtx->position().Rho()<=2.0 && fabs(vtx->position().Z())<=24.0 ) {
-      firstGoodVertex = vtx;
+      firstGoodVertex_ = vtx;
       break;
     }
   } // loop on vertices
 
-  if (firstGoodVertex == vertexCollection->end()) {
+  if (firstGoodVertex_ == vertexCollection->end()) {
     cout << "TrigAnalyzerRECORef::analyzeTrigger: didn't find any good offline vertices!! size: " 
 	 << vertexCollection->size() << std::endl;
     return;
@@ -222,7 +242,7 @@ TrigAnalyzerRECORef::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
   for ( MuonCollection::const_iterator muon = musHandle_->begin(); muon != muons_end; ++muon, ++muonIndex ) {
     LorentzVector lv(muon->p4());
 
-    //    if (verbose_) cout << " - reco muon: pt: " << lv.pt() << ", eta: " << lv.eta() << ", phi: " << lv.phi(); 
+    if (verbose_) cout << " - reco muon: pt: " << lv.pt() << ", eta: " << lv.eta() << ", phi: " << lv.phi() << std::endl; 
 
     bool duplicate = false;
     // check if this muon is already flagged as a duplicate
@@ -244,15 +264,44 @@ TrigAnalyzerRECORef::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
       continue;
     }
 
+    // max eta cut
+    if (fabs(muon->eta()) > offEta_) {
+      // if (verbose_) cout << ", FAILS eta" << std::endl;
+      continue;
+    }
+
     // basic dz cut to remove muons from large z
-    bool pass_dz = bool(fabs(muon->muonBestTrack()->dz(firstGoodVertex->position())) < 0.5);
+    bool pass_dz = bool(fabs(muon->muonBestTrack()->dz(firstGoodVertex_->position())) < 0.5);
     if (!pass_dz) {
       // if (verbose_) cout << ", FAILS dz" << std::endl;
       continue;
     }
 
+    // check for match to gen if requested
+    // match to gen object: status 3 muons
+    bool match = false;
+    if (doOffGenMatch_) {
+      match = false;
+      GenParticleCollection::const_iterator genps_end = genParticlesHandle_->end();  // Iterator
+      for ( GenParticleCollection::const_iterator genp = genParticlesHandle_->begin(); genp != genps_end; ++genp ) {
+	//      if (genp->status() != 3) continue;
+	// -- pythia 8..
+	if ((genp->status() != 1) && (genp->status() != 23)) continue;
+	if (abs(genp->pdgId()) != 13) continue;
+	// W or Z mother
+	if ((abs(genp->mother()->pdgId()) != 24) && (abs(genp->mother()->pdgId()) != 23)) continue;
+
+	float dr = ROOT::Math::VectorUtil::DeltaR(lv,genp->p4());
+	if (dr < 0.1) {
+	  match = true;
+	  break;
+	}
+      } // loop over genps
+      if (!match) continue;
+    } // do gen match
+
     // check tight muon ID, require here
-    bool pass_tight_1 = muon::isTightMuon(*muon,*firstGoodVertex);
+    bool pass_tight_1 = muon::isTightMuon(*muon,*firstGoodVertex_);
 
     // // check for duplicate muons using dR 0.1
     duplicate = false;
@@ -260,7 +309,7 @@ TrigAnalyzerRECORef::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
       LorentzVector lv2(muon2->p4());
       if (ROOT::Math::VectorUtil::DeltaR(lv,lv2) < 0.1) {
 	// check whether each passes tight ID
-	bool pass_tight_2 = muon::isTightMuon(*muon2,*firstGoodVertex);
+	bool pass_tight_2 = muon::isTightMuon(*muon2,*firstGoodVertex_);
 	// mu1 passes, mu2 doesn't: keep mu1
 	if (pass_tight_1 && !pass_tight_2) {
 	  muons_dup.push_back(*muon2);
@@ -306,7 +355,7 @@ TrigAnalyzerRECORef::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
   for ( MuonCollection::const_iterator muon = muons_good.begin(); muon != muons_end; ++muon, ++muonIndex ) {
     LorentzVector lv(muon->p4());
 
-    for ( MuonCollection::const_iterator muon2 = muons_good.begin(); muon2 != muons_end; ++muon2 ) {
+    for ( MuonCollection::const_iterator muon2 = muon+1; muon2 != muons_end; ++muon2 ) {
       if (muon == muon2) continue;
       LorentzVector lv2(muon2->p4());
       float mass = (lv+lv2).M();
@@ -324,26 +373,61 @@ TrigAnalyzerRECORef::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
     triggersMuons.push_back(trigMuons);
   }
 
+  if (verbose_) cout << endl;
+
   // loop to compare with triggers and make plots
   muonIndex = 0;
   const float dr_trigmatch = 0.2;
   for ( MuonCollection::const_iterator muon = muons_good.begin(); muon != muons_end; ++muon, ++muonIndex ) {
     LorentzVector lv(muon->p4());
 
-    bool pass_tight = muon::isTightMuon(*muon,*firstGoodVertex);
+    // match to L1 object if requested
+    if (doOffL1Match_) {
+      bool match = false;
+      L1MuonParticleCollection::const_iterator l1mus_end = l1MuonsHandle_->end();
+      for ( L1MuonParticleCollection::const_iterator l1mu = l1MuonsHandle_->begin(); l1mu != l1mus_end; ++l1mu ) {
+	// check L1 pt
+	if (l1mu->pt() < 15.) continue;
+	const L1MuGMTExtendedCand muonCand = (*l1mu).gmtMuonCand();
+	if (muonCand.empty()) std::cout << "WARNING: didn't find gmtMuonCand!" << std::endl;
+	else if (muonCand.quality() < 4) continue;
+	float dr = ROOT::Math::VectorUtil::DeltaR(lv,l1mu->p4());
+	if (dr < 0.2) {
+	  match = true;
+	  break;
+	}
+      } // loop over l1mus
+      if (!match) continue;
+    } // do L1 match
+
+    bool pass_tight = muon::isTightMuon(*muon,*firstGoodVertex_);
     if (offTight_ && !pass_tight) continue;
 
-    if (offDxy_ > 0.) {
-      const TrackRef siTrack  = muon->innerTrack();
-      float dxy = -999.;
-      if ( siTrack.isNonnull() && firstGoodVertex != vertexCollection->end() ) {
-	dxy = siTrack->dxy(firstGoodVertex->position());
-        if (fabs(dxy) > offDxy_) continue;
-      } else {
-	std::cout << "WARNING: problem with muon inner track!!" << std::endl;
-      }
+    int algo = 0;
+    int nhits = 0;
+    //    int nlosthits = 0;
+    int npixhits = 0;
+    float dxy = -999.;
+    const TrackRef innerTrack  = muon->innerTrack();
+    if (innerTrack.isNonnull()) {
+      npixhits = innerTrack->hitPattern().numberOfValidPixelHits();
+      algo = innerTrack->algo();
+      nhits = innerTrack->numberOfValidHits();
+      //      nlosthits = innerTrack->numberOfLostHits();
+      dxy = innerTrack->dxy(firstGoodVertex_->position());
+      if ((offDxy_ > 0.) && (fabs(dxy) > offDxy_)) continue;
+    } else {
+      std::cout << "WARNING: problem with muon inner track!!" << std::endl;
     }
 
+
+    float pfiso = muonPFiso(*muon);
+    if ((offIso_ > 0.) && (pfiso/lv.pt() > offIso_)) continue;
+
+    if (verbose_) cout << " - fully passing muon: pt: " << lv.pt() << ", eta: " << lv.eta() 
+		       << ", phi: " << lv.phi() << ", pfiso/pt: " << pfiso/lv.pt() 
+		       << ", nhits: " << nhits << ", npixhits: " << npixhits 
+		       << ", algo: " << algo << ", dxy: " << dxy << std::endl; 
 
     for (unsigned int itrig = 0; itrig < triggerNames_.size(); ++itrig) {
       const std::string nameShort(triggerNamesShort_.at(itrig));
@@ -359,28 +443,19 @@ TrigAnalyzerRECORef::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
       } // loop over trig muons
       if (match) {
 	fillHists(*muon,nameShort+"_match");
-	if (onZ) fillHists(*muon,nameShort+"_match_onZ");
-	else fillHists(*muon,nameShort+"_match_offZ");
+	if (doZWindow_) {
+	  if (onZ) fillHists(*muon,nameShort+"_match_onZ");
+	  else fillHists(*muon,nameShort+"_match_offZ");
+	}
       } else {
 	fillHists(*muon,nameShort+"_nomatch");
-	if (onZ) fillHists(*muon,nameShort+"_nomatch_onZ");
-	else fillHists(*muon,nameShort+"_nomatch_offZ");
+	if (doZWindow_) {
+	  if (onZ) fillHists(*muon,nameShort+"_nomatch_onZ");
+	  else fillHists(*muon,nameShort+"_nomatch_offZ");
+	}
+        if (verbose_) cout << "    - muon NOT MATCHED to trigger: " << nameShort << std::endl; 
       }
     } // loop over trigs
-
-    // bool pass_loose = muon::isLooseMuon(*muon);
-    // bool pass_tight = muon::isTightMuon(*muon,*firstGoodVertex);
-    // float trkiso = muon->pfIsolationR03().sumChargedHadronPt;
-    // bool pass_trkiso_trig = bool(trkiso/lv.pt() < 0.4);
-    // float pfiso = muonPFiso(*muon);
-    // bool pass_iso_loose = bool(pfiso/lv.pt() < 0.4);
-    // bool pass_iso_tight = bool(pfiso/lv.pt() < 0.15);
-    // const TrackRef siTrack  = muon->innerTrack();
-    // float dxy = -999.;
-    // if ( siTrack.isNonnull() && firstGoodVertex != vertexCollection->end() ) {
-    //   dxy = siTrack->dxy(firstGoodVertex->position());
-    // } 
-    // bool pass_dxy = bool(fabs(dxy) < 0.02);
 
   } // end muon loop for plots
 
@@ -389,8 +464,71 @@ TrigAnalyzerRECORef::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
   return;
 }
 
-//____________________________________________________________________________
+// //____________________________________________________________________________
+// trigger::VRmuon TrigAnalyzerRECORef::getL1Muons(const edm::Event& iEvent, const edm::EventSetup& iSetup, const std::string& filterName) {
+  
+//   using namespace std;
+//   using namespace edm;
+//   using namespace reco;
+//   using namespace trigger;
 
+//   if (verbose_) cout << endl;
+
+//   bool foundMuons = false;
+
+//   // Results from TriggerEvent product - Attention: must look only for
+//   // modules actually run in this path for this event!
+//   // -- loop backwards through modules to find last filter for each object type
+//   //  for (unsigned int j=0; j<=moduleIndex; ++j) {
+//   for (unsigned int j=moduleIndex; j!=0; --j) {
+//     const string& moduleLabel(filterName);
+//     const string  moduleType(hltConfig_.moduleType(moduleLabel));
+//     // check whether the module is packed up in TriggerEvent product
+//     const unsigned int filterIndex(triggerEventWithRefsHandle_->filterIndex(InputTag(moduleLabel,"",processName_)));
+//     //    if (filterIndex>=triggerEventHandle_->sizeFilters()) continue;
+//     if (filterIndex>=triggerEventWithRefsHandle_->size()) continue;
+//     if (verbose_) {
+//       cout << " 'L3' filter in slot " << j << " - label/type " << moduleLabel << "/" << moduleType << endl
+// 	   << " Filter packed up at: " << filterIndex << endl;
+//     }
+//     if (moduleLabel == "hltBoolEnd") continue;
+
+//     muonIds.clear();
+//     muonRefs.clear();
+//     triggerEventWithRefsHandle_->getObjects(filterIndex,muonIds,muonRefs);
+//     const unsigned int nMuons(muonIds.size());
+//     if (nMuons>0) {
+//       foundMuons = true;
+
+//       if (verbose_) {
+// 	cout << "   Muons: " << nMuons << ", MuonRefs: " << muonRefs.size()
+// 	     << "  - the objects: # id pt eta phi vz id key" << endl;
+// 	for (unsigned int i=0; i!=nMuons; ++i) {
+// 	  cout << "   " << i
+// 	       << " " << muonIds.at(i)
+// 	       << " " << muonRefs.at(i)->pt()
+// 	       << " " << muonRefs.at(i)->eta()
+// 	       << " " << muonRefs.at(i)->phi()
+// 	       << " " << muonRefs.at(i)->vz()
+// 	       << " " << muonRefs.at(i).id()
+// 	       << " " << muonRefs.at(i).key();
+// 	  cout << endl;
+// 	}
+//       } // verbose
+
+//     } // if muons in TriggerEventWithRefs
+
+//     if (foundMuons) break;
+//   } // backwards loop on modules
+
+//   if (!foundMuons) {
+//     cout << "TrigAnalyzerRECORef::getL1Muons: no valid trigger leptons!  filter: " << filterName << endl;
+//   }
+
+//   return muonRefs;
+// }
+
+//____________________________________________________________________________
 trigger::VRmuon TrigAnalyzerRECORef::getTrigMuons(const edm::Event& iEvent, const edm::EventSetup& iSetup, const std::string& triggerName) {
   
   using namespace std;
@@ -821,13 +959,21 @@ void TrigAnalyzerRECORef::bookHists(edm::Service<TFileService>& fs, const std::s
   std::string suf(suffix);
   if (suffix.size()) suf = "_"+suffix;
 
+  float pi = TMath::Pi();
   hists_1d_["h_pt"+suf] = fs->make<TH1F>(Form("h_pt%s",suf.c_str()) , ";  p_{T} [GeV]" , 100 , 0. , 100. );
   hists_1d_["h_eta"+suf] = fs->make<TH1F>(Form("h_eta%s",suf.c_str()) , ";  #eta" , 100 , -3. , 3. );
+  hists_1d_["h_phi"+suf] = fs->make<TH1F>(Form("h_phi%s",suf.c_str()) , "; #phi" , 100 , -pi , pi );
 
   hists_1d_["h_abstrkiso"+suf] = fs->make<TH1F>(Form("h_abstrkiso%s",suf.c_str()) , ";  charged pfiso [GeV]" , 200 , 0. , 10. );
   hists_1d_["h_reltrkiso"+suf] = fs->make<TH1F>(Form("h_reltrkiso%s",suf.c_str()) , ";  charged pfiso / p_{T}" , 200 , 0. , 2. );
   hists_1d_["h_abspfiso"+suf] = fs->make<TH1F>(Form("h_abspfiso%s",suf.c_str()) , ";  pfiso [GeV]" , 200 , 0. , 10. );
   hists_1d_["h_relpfiso"+suf] = fs->make<TH1F>(Form("h_relpfiso%s",suf.c_str()) , ";  pfiso / p_{T}" , 200 , 0. , 2. );
+
+  hists_1d_["h_npixhits"+suf] = fs->make<TH1F>(Form("h_npixhits%s",suf.c_str()) , "; N(pix hits)" , 5 , -0.5 , 4.5 );
+  hists_1d_["h_algo"+suf] = fs->make<TH1F>(Form("h_algo%s",suf.c_str()) , "; track algo" , 15 , -0.5 , 14.5 );
+  hists_1d_["h_nhits"+suf] = fs->make<TH1F>(Form("h_nhits%s",suf.c_str()) , "; N(hits)" , 30 , -0.5 , 29.5 );
+  hists_1d_["h_nlosthits"+suf] = fs->make<TH1F>(Form("h_nlosthits%s",suf.c_str()) , "; N(lost hits)" , 5 , -0.5 , 4.5 );
+  hists_1d_["h_dxy"+suf] = fs->make<TH1F>(Form("h_dxy%s",suf.c_str()) , "; dxy wrt vertex" , 100 , -0.2 , 0.2 );
 
   return;
 }
@@ -842,12 +988,25 @@ void TrigAnalyzerRECORef::fillHists(const reco::Muon& muon, const std::string& s
 
   hists_1d_["h_pt"+suf]->Fill(muon.pt());
   hists_1d_["h_eta"+suf]->Fill(muon.eta());
+  hists_1d_["h_phi"+suf]->Fill(muon.phi());
   float trkiso = muon.pfIsolationR03().sumChargedHadronPt;
   float pfiso = muonPFiso(muon);
   hists_1d_["h_abstrkiso"+suf]->Fill(trkiso);
   hists_1d_["h_reltrkiso"+suf]->Fill(trkiso/muon.pt());
   hists_1d_["h_abspfiso"+suf]->Fill(pfiso);
   hists_1d_["h_relpfiso"+suf]->Fill(pfiso/muon.pt());
+
+  const TrackRef innerTrack  = muon.innerTrack();
+  if (innerTrack.isNonnull()) {
+    hists_1d_["h_npixhits"+suf]->Fill(innerTrack->hitPattern().numberOfValidPixelHits());
+    hists_1d_["h_algo"+suf]->Fill(innerTrack->algo());
+    hists_1d_["h_nhits"+suf]->Fill(innerTrack->numberOfValidHits());
+    hists_1d_["h_nlosthits"+suf]->Fill(innerTrack->numberOfLostHits());
+    hists_1d_["h_dxy"+suf]->Fill(innerTrack->dxy(firstGoodVertex_->position()));
+
+  } else {
+    std::cout << "WARNING: problem with muon inner track!!" << std::endl;
+  }
 
   return;
 }
