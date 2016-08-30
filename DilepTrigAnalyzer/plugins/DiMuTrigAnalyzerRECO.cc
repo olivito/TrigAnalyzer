@@ -53,9 +53,10 @@ DiMuTrigAnalyzerRECO::DiMuTrigAnalyzerRECO(const edm::ParameterSet& ps)
   hists_1d_["h_pass_sigtrig_offline"] = fs->make<TH1F>("h_pass_sigtrig_offline" , "; passed numerator trigger" , 2 , 0. , 2. );
   hists_1d_["h_mll_allpairs"] = fs->make<TH1F>("h_mll_allpairs" , "; m_{ll} [GeV]" , 75 , 0. , 150. );
   hists_1d_["h_mll_allpairs_reftrig"] = fs->make<TH1F>("h_mll_allpairs_reftrig" , "; m_{ll} [GeV]" , 75 , 0. , 150. );
-  hists_1d_["h_nvtx_denom"] = fs->make<TH1F>("h_nvtx_denom" , "; N(vtx)" , 10 , 0. , 50. );
-  hists_1d_["h_nvtx_num"] = fs->make<TH1F>("h_nvtx_num" , "; N(vtx)" , 10 , 0. , 50. );
-  hists_1d_["h_nvtx_eff"] = fs->make<TH1F>("h_nvtx_eff" , "; N(vtx)" , 10 , 0. , 50. );
+  hists_1d_["h_nvtx_offline"] = fs->make<TH1F>("h_nvtx_offline" , "; N(vtx)" , 16 , 0. , 48. );
+  hists_1d_["h_nvtx_denom"] = fs->make<TH1F>("h_nvtx_denom" , "; N(vtx)" , 16 , 0. , 48. );
+  hists_1d_["h_nvtx_num"] = fs->make<TH1F>("h_nvtx_num" , "; N(vtx)" , 16 , 0. , 48. );
+  hists_1d_["h_nvtx_eff"] = fs->make<TH1F>("h_nvtx_eff" , "; N(vtx)" , 16 , 0. , 48. );
 
 }
 
@@ -301,6 +302,7 @@ DiMuTrigAnalyzerRECO::analyze(const edm::Event& iEvent, const edm::EventSetup& i
       if (refAccept) hists_1d_["h_mll_allpairs_reftrig"]->Fill(dimuon.M());
       if (dimuon.M() < 81. || dimuon.M() > 101.) continue;
       hists_1d_["h_pass_offline"]->Fill(1);
+      hists_1d_["h_nvtx_offline"]->Fill(nvtx);
 
       // make plots for passing events in Z window
       if (refAccept && (!doTrigObjectMatching_ || (refTriggerMatch_tag && refTriggerMatch_probe))) {
@@ -333,6 +335,7 @@ DiMuTrigAnalyzerRECO::analyze(const edm::Event& iEvent, const edm::EventSetup& i
 //____________________________________________________________________________
 void DiMuTrigAnalyzerRECO::endJob() {
 
+  hists_1d_["h_nvtx_offline"]->Sumw2();
   hists_1d_["h_nvtx_num"]->Sumw2();
   hists_1d_["h_nvtx_denom"]->Sumw2();
   hists_1d_["h_nvtx_eff"]->Divide(hists_1d_["h_nvtx_num"],hists_1d_["h_nvtx_denom"],1.0,1.0,"B");
